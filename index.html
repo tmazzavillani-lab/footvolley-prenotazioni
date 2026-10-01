@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ravenna Footvolley · Prenotazioni</title>
+<meta name="description" content="Prenota il tuo turno di allenamento del mercoledì sera.">
+<meta property="og:title" content="Ravenna Footvolley · Prenotazioni">
+<meta property="og:description" content="Allenamenti del mercoledì: 18–19, 19–20, 20–21. Prenota il tuo turno.">
+<meta property="og:image" content="logo.png">
+<meta name="theme-color" content="#0D6E78">
+<link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="logo.png" alt="Ravenna Footvolley" class="logo">
+    <div class="hgroup">
+      <h1>Allenamenti del mercoledì</h1>
+      <div class="club">T&amp;G Academy a.s.d. · affiliata CSEN</div>
+      <div class="sub" id="subline">18–19 · 19–20 · 20–21</div>
+    </div>
+  </header>
+
+  <div class="demo" id="demo" hidden>Modalità prova: le prenotazioni restano solo su questo dispositivo. PIN istruttore di prova: 1234.</div>
+
+  <section class="me">
+    <label for="nome">Il tuo nome</label>
+    <input type="text" id="nome" maxlength="40" autocomplete="given-name" placeholder="Nome e iniziale del cognome">
+  </section>
+
+  <nav class="dates" id="dates" aria-label="Scegli il mercoledì"></nav>
+
+  <div class="banner" id="annullata" hidden>Allenamento annullato per questa data.</div>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <div class="turni" id="turni"><p class="empty">Caricamento dei turni…</p></div>
+
+  <div class="row center">
+    <button class="btn" id="share">Condividi la lista su WhatsApp</button>
+  </div>
+
+  <section class="card admin" id="adminBox">
+    <div class="row between">
+      <h2>Area istruttore</h2>
+      <button class="btn small" id="logout" hidden>Esci</button>
+    </div>
+    <form id="login" class="row">
+      <label for="pin" class="sr">PIN istruttore</label>
+      <input type="password" id="pin" inputmode="numeric" autocomplete="current-password" placeholder="PIN istruttore">
+      <button class="btn" type="submit">Entra</button>
+    </form>
+    <div id="adminPanel" hidden>
+      <div class="totals">
+        <div><span>Iscritti</span><b id="tPres">0</b></div>
+        <div><span>Previsto</span><b id="tPrev">€0</b></div>
+        <div class="paid"><span>Incassato</span><b id="tPaid">€0</b></div>
+        <div class="due"><span>Da incassare</span><b id="tDue">€0</b></div>
+      </div>
+      <p class="hint">Nei turni qui sopra ora puoi segnare chi ha pagato, togliere o aggiungere persone senza limite di posti.</p>
+      <div class="row"><button class="btn" id="toggleDate">Annulla questa serata</button></div>
+      <h3>Ragazzi fissi</h3>
+      <p class="hint">I fissi compaiono da soli ogni mercoledì nel loro turno. Se uno salta una serata può segnarsi “Non vengo” dall'app.</p>
+      <div class="fissi" id="fissi"></div>
+      <div class="settings">
+        <label for="prezzo">Prezzo (€)<input type="number" id="prezzo" min="0" step="0.5"></label>
+        <label for="posti">Posti per turno<input type="number" id="posti" min="1" max="30" step="1"></label>
+      </div>
+      <div class="row"><button class="btn primary" id="saveCfg">Salva fissi e impostazioni</button><span class="note" id="cfgNote"></span></div>
+    </div>
+  </section>
+</div>
+<script src="config.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
