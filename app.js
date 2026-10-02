@@ -113,6 +113,8 @@
     FV_TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x) keep[T.k] = x.value; });
     var box = $('turni'); box.replaceChildren();
     var tot = 0, paid = 0;
+    var myTurn = null;
+    if (me) FV_TURNI.forEach(function (T) { if (state.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(me); })) myTurn = myTurn || T; });
     FV_TURNI.forEach(function (T) {
       var t = state.turni[T.k], n = t.count, cap = cfg.posti, started = fvStarted(curDate, T.k, now);
       tot += n;
@@ -173,6 +175,7 @@
         if (state.annullata) { label = 'Annullato'; dis = true; }
         else if (started) { label = 'Turno già iniziato'; dis = true; }
         else if (inList) { label = 'Sei in lista'; dis = true; }
+        else if (myTurn) { label = 'Sei già nel turno ' + myTurn.l; dis = true; }
         else if (n >= cap) { label = 'Turno pieno'; dis = true; }
         var b = btn('btn primary', label, function () {
           var nm = myName();

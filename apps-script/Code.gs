@@ -118,7 +118,7 @@ function fvRoute(p, st, nowStr) {
   var k = p.turno, nome = fvClean(p.nome);
   var needTurno = ['book', 'absent', 'add', 'pay', 'declare'].indexOf(a) >= 0;
   if (needTurno && !fvTurno(k)) throw new Error('Turno non valido');
-  var cur = needTurno ? fvState(cfg, st, d, token, admin).turni[k] : null;
+  var full = needTurno ? fvState(cfg, st, d, token, admin) : null, cur = full ? full.turni[k] : null;
   var isFisso = needTurno && fvHas(fvFissiAl(cfg, k, d), nome);
   var annullata = cfg.annullate.indexOf(d) >= 0;
 
@@ -130,6 +130,9 @@ function fvRoute(p, st, nowStr) {
       if (fvStarted(d, k, nowStr)) throw new Error('Il turno è già iniziato');
     }
     if (cur.people.some(function (x) { return fvNorm(x.nome) === fvNorm(nome); })) throw new Error(nome + ' è già nella lista');
+    FV_TURNI.forEach(function (T) {
+      if (T.k !== k && full.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(nome); })) throw new Error(nome + ' è già prenotato nel turno ' + T.l);
+    });
     if (!admin && cur.count >= cfg.posti) throw new Error('Turno pieno');
     if (isFisso) st.removeWhere('A', function (r) { return r.data === d && r.turno === k && fvNorm(r.nome) === fvNorm(nome); });
     else st.add('P', { id: fvId(), data: d, turno: k, nome: nome, token: admin ? '' : token, creato: nowStr });
