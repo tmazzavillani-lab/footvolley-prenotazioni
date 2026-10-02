@@ -7,7 +7,9 @@
 
   var TOKEN = lsGet('fv-token');
   if (!TOKEN) { TOKEN = Math.random().toString(36).slice(2) + Date.now().toString(36); lsSet('fv-token', TOKEN); }
-  var PIN = lsGet('fv-pin');
+  // ?atleta mostra l'app come la vede un ragazzo, senza toccare il PIN salvato
+  var VISTA_ATLETA = /(^|[?&])atleta/.test(location.search);
+  var PIN = VISTA_ATLETA ? null : lsGet('fv-pin');
   var state = null, curDate = null, busy = false, adminCfg = null;
 
   function nowRome() {
@@ -138,7 +140,10 @@
         if (admin && p.pagato) { paid++; if (perMetodo[p.metodo] != null) perMetodo[p.metodo]++; }
         var daConf = p.fisso && !p.confermato;
         var li = el('li', 'p' + (isMe ? ' mine' : ''));
-        li.append(el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? (daConf ? ' wait' : '') : ' x'), p.fisso ? (daConf ? 'da confermare' : 'fisso ✓') : 'aggiunto'));
+        var dot = el('span', 'dot' + (p.pagato ? ' ok' : ''));
+        dot.title = p.pagato ? 'Pagato' : 'Da pagare';
+        dot.setAttribute('aria-label', dot.title);
+        li.append(dot, el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? (daConf ? ' wait' : '') : ' x'), p.fisso ? (daConf ? 'da confermare' : 'fisso ✓') : 'aggiunto'));
         if (admin) {
           if (p.pagato) {
             li.append(btn('pay on', '✓ ' + (METODI[p.metodo] || 'Pagato'), function () {
@@ -154,8 +159,8 @@
             if (p.fisso) act({ action: 'absent', turno: T.k, nome: p.nome }, p.nome + ' segnato assente');
             else act({ action: 'cancel', id: p.id }, p.nome + ' tolto dal turno');
           }));
-        } else if (p.pagato) {
-          li.append(el('span', 'paid ok', '✓ Pagato'));
+        } else {
+          li.append(el('span', 'paid' + (p.pagato ? ' ok' : ' no'), p.pagato ? 'Pagato' : 'Da pagare'));
         }
         if (!admin && !started && !state.annullata) {
           if (p.mine) li.append(btn('link', 'Annulla', function () { act({ action: 'cancel', id: p.id }, 'Prenotazione annullata'); }));
@@ -281,6 +286,7 @@
   };
 
   $('demo').hidden = !!API;
+  if (VISTA_ATLETA) { $('adminBox').hidden = true; $('vistaAtleta').hidden = false; }
   var IBAN = (window.FV_IBAN || '').trim();
   if (IBAN) {
     $('iban').textContent = IBAN;

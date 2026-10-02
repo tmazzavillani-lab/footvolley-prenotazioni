@@ -117,3 +117,10 @@ form.add input{flex:1;padding:8px 10px}
 .payinfo b{font-variant-numeric:tabular-nums;letter-spacing:.02em;overflow-wrap:anywhere}
 .payinfo .hint{flex-basis:100%}
 .totals small{font-size:.72rem;color:var(--muted)}
+
+.dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:var(--warn);opacity:.55}
+.dot.ok{background:var(--ok);opacity:1}
+.paid.no{background:var(--warn-soft);color:var(--warn)}
+a.btn{text-decoration:none;display:inline-block}
+.vista{margin:0;background:var(--sea-soft);border-radius:12px;padding:10px 14px;font-size:.92rem}
+.vista a{color:var(--sea);font-weight:600}

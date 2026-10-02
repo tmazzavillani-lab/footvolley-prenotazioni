@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 <div class="wrap">
@@ -44,6 +44,8 @@
 
   <div class="turni" id="turni"><p class="empty">Caricamento dei turni…</p></div>
 
+  <p class="vista" id="vistaAtleta" hidden>Stai guardando l'app come la vede un atleta. <a href="./">Torna alla vista istruttore</a></p>
+
   <section class="card admin" id="adminBox">
     <div class="row between">
       <h2>Area istruttore</h2>
@@ -62,7 +64,7 @@
         <div class="due"><span>Da incassare</span><b id="tDue">€0</b></div>
       </div>
       <p class="hint">Nei turni qui sopra ora puoi segnare chi ha pagato, togliere o aggiungere persone senza limite di posti.</p>
-      <div class="row"><button class="btn" id="toggleDate">Annulla questa serata</button></div>
+      <div class="row"><a class="btn" href="?atleta" target="_blank" rel="noopener">Vedi come atleta</a><button class="btn" id="toggleDate">Annulla questa serata</button></div>
       <h3>Ragazzi fissi</h3>
       <p class="hint">I fissi compaiono da soli ogni mercoledì nel loro turno, a partire dal giorno in cui li inserisci (se li togli restano nelle serate passate). Se uno salta una serata può segnarsi “Non vengo” dall'app.</p>
       <div class="fissi" id="fissi"></div>
@@ -75,8 +77,8 @@
     </div>
   </section>
 </div>
-<script src="config.js?v=10"></script>
-<script src="core.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="config.js?v=11"></script>
+<script src="core.js?v=11"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>
