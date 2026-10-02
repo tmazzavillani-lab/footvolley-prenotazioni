@@ -17,13 +17,14 @@
   function eur(v) { return '€' + (Math.round(v * 100) / 100).toLocaleString('it-IT'); }
   function myName() { return fvClean($('nome').value); }
 
+  var PRIMA_SERATA = '2026-10-07'; // prima serata con le prenotazioni online: prima non si mostra nulla
   // Prossimi 4 mercoledì (oggi incluso fino alle 21), più `back` mercoledì passati
   function wednesdays(back) {
     var now = nowRome(), today = new Date(now.slice(0, 10) + 'T12:00:00'), out = [];
     var d = new Date(today); d.setDate(d.getDate() + ((3 - d.getDay() + 7) % 7));
     if (iso(d) === now.slice(0, 10) && now.slice(11) >= '21:00') d.setDate(d.getDate() + 7);
     d.setDate(d.getDate() - 7 * (back || 0));
-    for (var i = 0; i < 4 + (back || 0); i++) { out.push(iso(d)); d.setDate(d.getDate() + 7); }
+    for (var i = 0; i < 4 + (back || 0); i++) { if (iso(d) >= PRIMA_SERATA) out.push(iso(d)); d.setDate(d.getDate() + 7); }
     return out;
   }
   function dateLabel(s, opts) { return new Date(s + 'T12:00:00').toLocaleDateString('it-IT', opts); }

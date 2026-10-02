@@ -61,3 +61,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: l'istruttore (con PIN) vede anche le ultime 12 serate concluse per controllare e segnare i pagamenti.
 - 2026-10-02: i fissi contano solo dalla data di inserimento (storico dal/al in CONFIG); se tolti restano nelle serate passate. Script Apps aggiornato.
 - 2026-10-02: un nome può stare in un solo turno per serata (anche per l'istruttore).
+- 2026-10-02: lo storico istruttore parte dal 7 ottobre 2026 (prima serata).
