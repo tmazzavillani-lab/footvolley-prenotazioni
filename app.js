@@ -10,7 +10,7 @@
   // ?atleta mostra l'app come la vede un ragazzo, senza toccare il PIN salvato
   var VISTA_ATLETA = /(^|[?&])atleta(=|&|$)/.test(location.search);
   var PIN = VISTA_ATLETA ? null : lsGet('fv-pin');
-  var state = null, curDate = null, busy = false, adminCfg = null;
+  var state = null, curDate = null, busy = false, adminCfg = null; cacheSerate = {};
 
   function nowRome() {
     return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).replace('T', ' ');
@@ -66,15 +66,25 @@
     clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 4000);
   }
 
+  // Copia locale delle serate già caricate: cambiando mercoledì si vede subito, poi si aggiorna
+  var cacheSerate = {};
+  function precarica() {
+    wednesdays(state && state.admin ? 12 : 0).forEach(function (d) {
+      if (d === curDate || cacheSerate[d]) return;
+      api({ action: 'state', date: d, nome: myName() }).then(function (s) { cacheSerate[d] = s; }).catch(function () { });
+    });
+  }
   function load() {
-    var d = curDate;
+    var d = curDate, primo = !Object.keys(cacheSerate).length;
     return api({ action: 'state', date: d, nome: myName() }).then(function (s) {
+      cacheSerate[d] = s;
       if (d !== curDate) return;
       state = s;
+      if (primo) setTimeout(precarica, 300);
       if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi, satispay: s.config.satispay || '', speciali: s.config.speciali || {}, postiTurno: s.config.postiTurno || {} }));
       render();
     }).catch(function (e) {
-      if (/PIN/.test(e.message) && PIN) { PIN = null; lsSet('fv-pin', null); adminCfg = null; return load(); }
+      if (/PIN/.test(e.message) && PIN) { PIN = null; lsSet('fv-pin', null); adminCfg = null; cacheSerate = {}; return load(); }
       toast('Non riesco a caricare i turni: ' + e.message, true);
     });
   }
@@ -86,7 +96,7 @@
     p.date = curDate;
     var ok = false;
     try { ottimista(p); render(); } catch (e) { }
-    api(p).then(function (s) { state = s; render(); if (okMsg) toast(okMsg); ok = true; })
+    api(p).then(function (s) { state = s; cacheSerate[p.date] = s; render(); if (okMsg) toast(okMsg); ok = true; })
       .catch(function (e) { toast(e.message, true); load(); })
       .then(function () { busy = false; document.body.style.cursor = ''; document.body.classList.remove('busy'); if (ok && then) then(); });
   }
@@ -135,7 +145,11 @@
       b.setAttribute('aria-pressed', d === curDate);
       if (d === curDate) sel = b;
       b.append(el('small', null, d < next ? 'concluso' : dateLabel(d, { weekday: 'long' })), document.createTextNode(dateLabel(d, { day: 'numeric', month: 'long' })));
-      b.onclick = function () { if (d === curDate) return; curDate = d; renderDates(); $('turni').replaceChildren(el('p', 'empty', 'Caricamento dei turni…')); load(); };
+      b.onclick = function () {
+        if (d === curDate) return; curDate = d; renderDates();
+        if (cacheSerate[d]) { state = cacheSerate[d]; render(); } else $('turni').replaceChildren(el('p', 'empty', 'Caricamento dei turni…'));
+        load();
+      };
       box.append(b);
     });
     if (sel) box.scrollLeft = Math.max(0, sel.offsetLeft - box.offsetLeft - 8);
@@ -387,10 +401,10 @@
     e.preventDefault();
     var pin = $('pin').value.trim(); if (!pin) return;
     PIN = pin;
-    api({ action: 'login' }).then(function () { lsSet('fv-pin', pin); $('pin').value = ''; adminCfg = null; return load(); })
+    api({ action: 'login' }).then(function () { lsSet('fv-pin', pin); $('pin').value = ''; adminCfg = null; cacheSerate = {}; return load(); })
       .catch(function (err) { PIN = null; toast(err.message, true); });
   };
-  $('logout').onclick = function () { PIN = null; lsSet('fv-pin', null); adminCfg = null; load(); };
+  $('logout').onclick = function () { PIN = null; lsSet('fv-pin', null); adminCfg = null; cacheSerate = {}; load(); };
   $('toggleDate').onclick = function () { act({ action: 'toggleDate', annullata: !state.annullata }, state.annullata ? 'Serata riattivata' : 'Serata annullata'); };
   $('prezzo').onchange = function () { var v = parseFloat(this.value); if (v >= 0) adminCfg.prezzo = v; };
   $('satispay').onchange = function () { adminCfg.satispay = this.value.trim(); };

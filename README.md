@@ -81,3 +81,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: aggiornamento immediato dell'interfaccia al tocco (poi confermato dallo script).
 - 2026-10-02 (script v10): i prezzi concordati tornano all'Area istruttore (prima il riquadro si svuotava dopo il ricaricamento). Scritte pagamento atleta: Da pagare / Pagato con X · in attesa di conferma / Pagamento confermato.
 - 2026-10-02 (script v11): verifica del nome con codice via email (foglio *Atleti verificati*), obbligatoria per prenotarsi/confermare; istruttore: elenco atleti verificati e Sblocca. Tolto il promemoria calendario. Lo script invia email dal Gmail dell'istruttore (MailApp, autorizzato).
+- 2026-10-02: istruzioni di registrazione con email nella guida; mercoledì precaricati per passare dall'uno all'altro senza attesa.

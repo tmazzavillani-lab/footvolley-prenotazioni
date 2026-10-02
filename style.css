@@ -127,7 +127,7 @@ a.btn{text-decoration:none;display:inline-block}
 
 .guida{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
 .guida summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:1.15rem}
-.guida-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:10px}
+.guida-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:10px}
 .guida h3{font-size:1.05rem;margin-bottom:4px}
 .guida p{margin:0;font-size:.92rem;color:var(--muted);max-width:60ch}
 .guida p b{color:var(--ink)}
