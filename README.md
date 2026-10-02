@@ -9,8 +9,8 @@ T&G Academy a.s.d. – affiliata CSEN.
   toglie persone, annulla una serata, vede incassato e da incassare.
 - **Satispay**: se in Area istruttore inserisci il tuo link di pagamento Satispay, chi è in lista vede
   il pulsante "Paga €16 con Satispay".
-- **Pagamenti**: accanto a ogni nome c'è lo stato. Il ragazzo tocca "Ho pagato" (giallo: da verificare),
-  tu controlli su Satispay e premi "Conferma" (verde: ✓ Pagato).
+- **Pagamenti**: li segna solo l'istruttore. Controlli la Colletta Satispay e premi "Segna pagato"
+  accanto al nome: tutti vedono "✓ Pagato".
 - Le prenotazioni finiscono in un **Google Sheet** tuo (fogli *Prenotazioni*, *Assenze*, *Pagamenti*).
 
 Finché `config.js` non contiene l'URL dello script, l'app gira in **modalità prova** (dati solo sul
@@ -57,3 +57,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: collegato il Google Sheet "Footvolley prenotazioni" (script standalone con proprietà
   SHEET_ID e ADMIN_PIN). Provati sul backend vero: prenotazione, "Ho pagato", annullo (solo dallo
   stesso telefono). Da fare: inserire i fissi e il link Satispay dall'Area istruttore, prova dal telefono.
+- 2026-10-02: tolto "Ho pagato" dei ragazzi: i pagamenti li segna solo l'istruttore (Colletta Satispay).
