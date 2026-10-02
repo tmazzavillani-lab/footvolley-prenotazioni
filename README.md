@@ -63,3 +63,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: un nome può stare in un solo turno per serata (anche per l'istruttore).
 - 2026-10-02: lo storico istruttore parte dal 7 ottobre 2026 (prima serata).
 - Quando si modificano style.css/app.js/core.js/config.js, aumentare ?v=N in index.html (cache di GitHub Pages: 10 minuti).
+- 2026-10-02: richiesto nome e cognome completi per prenotare (ricordato dal telefono).

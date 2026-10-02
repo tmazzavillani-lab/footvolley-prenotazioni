@@ -180,7 +180,8 @@
         else if (n >= cap) { label = 'Turno pieno'; dis = true; }
         var b = btn('btn primary', label, function () {
           var nm = myName();
-          if (!nm) { toast('Scrivi prima il tuo nome in alto', true); $('nome').focus(); return; }
+          if (!nm) { toast('Scrivi prima nome e cognome in alto', true); $('nome').focus(); return; }
+          if (nm.split(' ').filter(function (w) { return w.replace(/[^\p{L}]/gu, '').length >= 2; }).length < 2) { toast('Scrivi nome e cognome completi (es. Marco Rossi)', true); $('nome').focus(); return; }
           act({ action: 'book', turno: T.k, nome: nm }, 'Prenotato: ' + T.l + ', ' + dateLabel(curDate, { weekday: 'long', day: 'numeric', month: 'long' }));
         });
         b.disabled = dis;
