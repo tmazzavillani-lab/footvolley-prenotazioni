@@ -111,6 +111,8 @@ function fvState(cfg, st, d, token, admin, nowStr) {
       if (pz === 0) x.gratis = true;
       if (g) x.metodo = g.metodo || '';
       if (!g && dd) { x.dichiarato = true; x.metodo = dd.metodo || ''; }
+      // i pagamenti di una persona li vedono solo lei e l'istruttore
+      if (!(admin || x.mine || x.telefono === 'mio')) { delete x.pagato; delete x.dichiarato; delete x.metodo; delete x.gratis; }
     });
     turni[k] = { people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length };
   });

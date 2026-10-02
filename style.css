@@ -142,3 +142,5 @@ form.add label.prova{flex-basis:100%;font-size:.85rem;color:var(--muted);display
 
 .settings textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%;text-transform:none;letter-spacing:0}
 .tag.prezzo{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+
+.dot.none{display:none}

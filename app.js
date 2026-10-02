@@ -150,7 +150,8 @@
         }
         var daConf = p.fisso && !p.confermato;
         var li = el('li', 'p' + (isMe ? ' mine' : ''));
-        var dot = el('span', 'dot' + (p.pagato || free ? ' ok' : p.dichiarato ? ' wait' : ''));
+        var vedoPag = admin || p.pagato !== undefined;
+        var dot = el('span', 'dot' + (!vedoPag ? ' none' : p.pagato || free ? ' ok' : p.dichiarato ? ' wait' : ''));
         dot.title = free ? 'Gratis' : p.pagato ? 'Pagato' : p.dichiarato ? 'Pagamento da verificare' : 'Da pagare';
         dot.setAttribute('aria-label', dot.title);
         li.append(dot, el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? (daConf ? ' wait' : '') : ' x'), p.fisso ? (daConf ? 'da confermare' : 'fisso ✓') : 'aggiunto'));
@@ -177,8 +178,9 @@
           }));
         } else {
           var mio = p.mine || (p.fisso && isMe && p.telefono !== 'altro');
-          if (mio && free && !p.pagato) li.append(el('span', 'paid ok', 'Gratis'));
-          else if (p.pagato || free) li.append(el('span', 'paid ok', p.metodo === 'prova' ? 'Prova gratuita' : 'Pagato'));
+          if (!mio) { /* i pagamenti degli altri non si vedono */ }
+          else if (free && !p.pagato) li.append(el('span', 'paid ok', 'Gratis'));
+          else if (p.pagato) li.append(el('span', 'paid ok', p.metodo === 'prova' ? 'Prova gratuita' : 'Pagato'));
           else if (p.dichiarato) {
             li.append(el('span', 'paid wait', (METODI[p.metodo] || 'Pagato') + ' · da verificare'));
             if (mio) li.append(btn('link back', 'Correggi', function () { act({ action: 'declare', turno: T.k, nome: p.nome, undo: true }, 'Ok, puoi scegliere di nuovo il metodo'); }, 'Hai sbagliato metodo? Toglilo e riscegli'));
@@ -188,7 +190,7 @@
               ask.append(btn('pay', METODI[m], function () { act({ action: 'declare', turno: T.k, nome: p.nome, metodo: m }, 'Grazie! L’istruttore verificherà il pagamento'); }));
             });
             li.append(ask);
-          } else li.append(el('span', 'paid no', 'Da pagare'));
+          }
         }
         if (!admin && !started && !state.annullata) {
           if (p.mine) li.append(btn('link', 'Annulla', function () { act({ action: 'cancel', id: p.id }, 'Prenotazione annullata'); }));

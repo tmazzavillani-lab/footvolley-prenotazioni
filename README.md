@@ -73,3 +73,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: sezione "Come funziona" (fissi / non fissi / pagamento), aperta alla prima visita.
 - 2026-10-02 (script v5): i ragazzi segnano "Ho pagato con" (Satispay/Contanti/Bonifico) -> giallo; l'istruttore preme Verifica -> verde. Metodo "Prova gratuita" solo istruttore (escluso dagli incassi), anche come spunta quando aggiunge un nome.
 - 2026-10-02 (script v6): prezzi concordati per persona (Area istruttore, "Nome Cognome = 10" o "= gratis"); visibili solo all'istruttore e al diretto interessato; chi è gratis risulta in regola agli altri; incassi calcolati sul prezzo di ciascuno.
+- 2026-10-02 (script v7): i pagamenti (stato, metodo, gratis, prezzo) li vedono solo l'interessato e l'istruttore; lo script non li manda agli altri telefoni.
