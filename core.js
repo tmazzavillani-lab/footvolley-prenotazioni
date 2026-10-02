@@ -8,6 +8,8 @@ function fvHas(arr, n) { return arr.some(function (x) { return fvNorm(x) === fvN
 function fvIsWed(d) { return /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(d + 'T12:00:00Z').getUTCDay() === 3; }
 function fvTurno(k) { return FV_TURNI.filter(function (t) { return t.k === k; })[0]; }
 function fvStarted(d, k, nowStr) { return nowStr >= d + ' ' + fvTurno(k).h + ':00'; }
+var FV_INIZIO = '2026-10-01'; // fissi inseriti prima dello storico contano da questa data
+function fvIsDay(d) { return /^\d{4}-\d{2}-\d{2}$/.test(String(d || '')); }
 function fvId() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
 
 function fvFixConfig(c) {
@@ -19,11 +21,45 @@ function fvFixConfig(c) {
     annullate: Array.isArray(c.annullate) ? c.annullate.filter(fvIsWed) : [],
     satispay: /^https:\/\/[^\s<>\x22\x27]+$/.test(String(c.satispay || '').trim()) ? String(c.satispay).trim().slice(0, 300) : ''
   };
+  // fissi[k] = storico [{nome, dal, al?}]: conta nei mercoledì con dal <= data < al
   FV_TURNI.forEach(function (t) {
     var list = [];
-    (Array.isArray(f[t.k]) ? f[t.k] : []).forEach(function (n) { n = fvClean(n); if (n && !fvHas(list, n)) list.push(n); });
-    out.fissi[t.k] = list.slice(0, 30);
+    (Array.isArray(f[t.k]) ? f[t.k] : []).forEach(function (x) {
+      var o = typeof x === 'string' ? { nome: x } : (x || {}), n = fvClean(o.nome);
+      if (!n) return;
+      var e = { nome: n, dal: fvIsDay(o.dal) ? o.dal : FV_INIZIO };
+      if (fvIsDay(o.al)) e.al = o.al;
+      if (!e.al && fvHas(fvFissiOggi(list), n)) return;
+      list.push(e);
+    });
+    out.fissi[t.k] = list.slice(-100);
   });
+  return out;
+}
+
+function fvFissiOggi(list) { return list.filter(function (e) { return !e.al; }).map(function (e) { return e.nome; }); }
+function fvFissiAl(cfg, k, d) {
+  var out = [];
+  (cfg.fissi[k] || []).forEach(function (e) { if (e.dal <= d && (!e.al || d < e.al) && !fvHas(out, e.nome)) out.push(e.nome); });
+  return out;
+}
+function fvPublicConfig(cfg) {
+  var f = {};
+  FV_TURNI.forEach(function (t) { f[t.k] = fvFissiOggi(cfg.fissi[t.k] || []); });
+  return { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay, fissi: f };
+}
+// Applica la nuova lista di fissi (nomi) allo storico: nuovi da oggi, tolti fino a oggi
+function fvAggiornaFissi(storico, nomi, oggi) {
+  var attivi = fvFissiOggi(storico), out = [];
+  nomi = (Array.isArray(nomi) ? nomi : []).map(fvClean).filter(Boolean);
+  storico.forEach(function (e) {
+    if (!e.al && !fvHas(nomi, e.nome)) {
+      if (e.dal >= oggi) return; // aggiunto e tolto senza mai contare
+      e = { nome: e.nome, dal: e.dal, al: oggi };
+    }
+    out.push(e);
+  });
+  nomi.forEach(function (n) { if (!fvHas(attivi, n) && !fvHas(fvFissiOggi(out), n)) out.push({ nome: n, dal: oggi }); });
   return out;
 }
 
@@ -34,7 +70,7 @@ function fvState(cfg, st, d, token, admin) {
   var D = st.list('D').filter(function (r) { return r.data === d; });
   var turni = {};
   FV_TURNI.forEach(function (T) {
-    var k = T.k, fx = cfg.fissi[k] || [];
+    var k = T.k, fx = fvFissiAl(cfg, k, d);
     var ass = A.filter(function (r) { return r.turno === k; }).map(function (r) { return r.nome; });
     var people = fx.filter(function (n) { return !fvHas(ass, n); }).map(function (n) { return { nome: n, fisso: true }; })
       .concat(P.filter(function (r) { return r.turno === k; }).map(function (r) {
@@ -51,7 +87,7 @@ function fvState(cfg, st, d, token, admin) {
     date: d, annullata: cfg.annullate.indexOf(d) >= 0, admin: admin, turni: turni,
     config: { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay }
   };
-  if (admin) res.config.fissi = cfg.fissi;
+  if (admin) res.config.fissi = fvPublicConfig(cfg).fissi;
   return res;
 }
 
@@ -66,10 +102,12 @@ function fvRoute(p, st, nowStr) {
   if (a === 'login') return { admin: true };
   if (a === 'setConfig') {
     if (!admin) throw new Error('Serve il PIN istruttore');
-    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: p.fissi, annullate: cfg.annullate, satispay: p.satispay });
+    var oggi = nowStr.slice(0, 10), nf = {}, pf = p.fissi || {};
+    FV_TURNI.forEach(function (t) { nf[t.k] = fvAggiornaFissi(cfg.fissi[t.k], pf[t.k], oggi); });
+    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay });
     if (p.satispay && !nc.satispay) throw new Error('Il link Satispay deve iniziare con https://');
     st.setConfig(nc);
-    return { config: nc };
+    return { config: fvPublicConfig(nc) };
   }
   var d = String(p.date || '');
   if (!fvIsWed(d)) throw new Error('Data non valida');
@@ -80,7 +118,7 @@ function fvRoute(p, st, nowStr) {
   var needTurno = ['book', 'absent', 'add', 'pay', 'declare'].indexOf(a) >= 0;
   if (needTurno && !fvTurno(k)) throw new Error('Turno non valido');
   var cur = needTurno ? fvState(cfg, st, d, token, admin).turni[k] : null;
-  var isFisso = needTurno && fvHas(cfg.fissi[k], nome);
+  var isFisso = needTurno && fvHas(fvFissiAl(cfg, k, d), nome);
   var annullata = cfg.annullate.indexOf(d) >= 0;
 
   if (a === 'book' || a === 'add') {
