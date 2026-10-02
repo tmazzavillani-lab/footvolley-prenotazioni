@@ -137,8 +137,9 @@
 
       var ul = el('ul', 'people'), inList = false, mioRiservato = false;
       t.people.forEach(function (p) {
-        var isMe = p.mine || (me && fvNorm(p.nome) === fvNorm(me));
-        if (isMe && p.riservato) mioRiservato = true; else if (isMe) inList = true;
+        var nomeMio = !!me && fvNorm(p.nome) === fvNorm(me), isMe = p.mine || nomeMio;
+        // il pulsante del turno segue il nome scritto in alto (dallo stesso telefono si può prenotare anche per un amico)
+        if (nomeMio && p.riservato) mioRiservato = true; else if (nomeMio) inList = true;
         var prezzo = p.prezzo != null ? p.prezzo : cfg.prezzo, free = !!p.gratis;
         if (admin) {
           if (p.pagato && p.metodo === 'prova') prove++;
