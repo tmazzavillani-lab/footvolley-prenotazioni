@@ -67,3 +67,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: pulsante "Paga con Satispay" sempre visibile agli atleti in alto (oltre a quello sotto il proprio turno).
 - 2026-10-02 (script v3): fissi confermano entro mercoledì 14:00 (foglio *Conferme fissi*), poi il posto si libera; pagamenti con metodo Satispay/Contanti/Bonifico (colonna *metodo*); IBAN e info contanti/bonifico per gli atleti.
 - 2026-10-02: pulsante "Manda la lista nel gruppo WhatsApp" visibile solo all'istruttore.
+- 2026-10-02 (script v4): ogni fisso è collegato al primo telefono che conferma/segna assenza (foglio *Telefoni fissi*); per cambiarlo cancellare la riga nel foglio.

@@ -159,7 +159,7 @@
         }
         if (!admin && !started && !state.annullata) {
           if (p.mine) li.append(btn('link', 'Annulla', function () { act({ action: 'cancel', id: p.id }, 'Prenotazione annullata'); }));
-          else if (p.fisso && isMe) {
+          else if (p.fisso && isMe && p.telefono !== 'altro') {
             if (daConf) li.append(btn('pay wait', 'Confermo', function () { act({ action: 'confirm', turno: T.k, nome: p.nome }, 'Presenza confermata, a mercoledì!'); }));
             li.append(btn('link', 'Non vengo', function () { act({ action: 'absent', turno: T.k, nome: p.nome }, 'Ok, segnato che questa volta non vieni'); }));
           }

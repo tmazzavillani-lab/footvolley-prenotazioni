@@ -67,12 +67,19 @@ function fvAggiornaFissi(storico, nomi, oggi) {
 var FV_METODI = ['satispay', 'contanti', 'bonifico'];
 var FV_ORA_CONFERMA = '14:00'; // i fissi confermano entro il mercoledì a quest'ora, poi il posto si libera
 
+// Ogni fisso viene collegato al primo telefono che conferma o segna "Non vengo"; poi solo quel telefono (o l'istruttore)
+function fvTelefono(st, nome) { return st.list('K').filter(function (r) { return fvNorm(r.nome) === fvNorm(nome); })[0]; }
+function fvCheckTelefono(st, nome, token, nowStr) {
+  var t = fvTelefono(st, nome);
+  if (t && t.token !== token) throw new Error(nome + ' è collegato a un altro telefono: chiedi all’istruttore');
+  if (!t && token) st.add('K', { nome: nome, token: token, creato: nowStr });
+}
 function fvScaduta(d, nowStr) { return nowStr >= d + ' ' + FV_ORA_CONFERMA; }
 
 function fvState(cfg, st, d, token, admin, nowStr) {
   var day = function (r) { return r.data === d; };
   var P = st.list('P').filter(day), A = st.list('A').filter(day), G = st.list('G').filter(day), C = st.list('C').filter(day);
-  var scaduta = fvScaduta(d, nowStr), turni = {};
+  var K = st.list('K'), scaduta = fvScaduta(d, nowStr), turni = {};
   FV_TURNI.forEach(function (T) {
     var k = T.k, fx = fvFissiAl(cfg, k, d);
     var inT = function (rows) { return rows.filter(function (r) { return r.turno === k; }).map(function (r) { return r.nome; }); };
@@ -82,7 +89,8 @@ function fvState(cfg, st, d, token, admin, nowStr) {
       if (fvHas(ass, n)) return;
       var ok = fvHas(conf, n);
       if (!ok && scaduta) { nonConf.push(n); return; }
-      people.push({ nome: n, fisso: true, confermato: ok });
+      var tel = K.filter(function (r) { return fvNorm(r.nome) === fvNorm(n); })[0];
+      people.push({ nome: n, fisso: true, confermato: ok, telefono: tel ? (tel.token === token ? 'mio' : 'altro') : '' });
     });
     people = people.concat(P.filter(function (r) { return r.turno === k; }).map(function (r) {
       return { id: r.id, nome: r.nome, fisso: false, mine: !!token && r.token === token };
@@ -149,6 +157,7 @@ function fvRoute(p, st, nowStr) {
     });
     if (!admin && !gia && cur.count >= cfg.posti) throw new Error('Turno pieno');
     if (isFisso) {
+      if (!admin) fvCheckTelefono(st, nome, token, nowStr);
       st.removeWhere('A', match);
       st.removeWhere('C', match);
       st.add('C', { data: d, turno: k, nome: nome, creato: nowStr });
@@ -167,6 +176,7 @@ function fvRoute(p, st, nowStr) {
   } else if (a === 'absent') {
     if (!isFisso) throw new Error(nome + ' non è fisso in questo turno');
     if (!admin && fvStarted(d, k, nowStr)) throw new Error('Il turno è già iniziato');
+    if (!admin) fvCheckTelefono(st, nome, token, nowStr);
     st.removeWhere('A', match);
     st.removeWhere('C', match);
     st.add('A', { data: d, turno: k, nome: nome });
@@ -217,8 +227,8 @@ function fvOut_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], C: ['data', 'turno', 'nome', 'creato'] };
-var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', C: 'Conferme fissi' };
+var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], C: ['data', 'turno', 'nome', 'creato'], K: ['nome', 'token', 'creato'] };
+var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', C: 'Conferme fissi', K: 'Telefoni fissi' };
 var fvCache_ = {};
 
 function fvSheet_(k) {
@@ -259,6 +269,6 @@ var FvSheetStore = {
 
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.
 function setup() {
-  ['P', 'A', 'G', 'C'].forEach(fvSheet_);
+  ['P', 'A', 'G', 'C', 'K'].forEach(fvSheet_);
   if (!FvSheetStore.adminPin()) Logger.log('Ricorda: imposta ADMIN_PIN nelle Proprietà script.');
 }
