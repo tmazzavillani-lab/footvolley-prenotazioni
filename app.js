@@ -213,6 +213,7 @@
     if (foc && /^add-/.test(foc) && $(foc)) $(foc).focus();
 
     $('logout').hidden = !admin;
+    $('share').hidden = !admin;
     $('login').hidden = admin;
     $('adminPanel').hidden = !admin;
     if (admin) {

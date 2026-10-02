@@ -66,3 +66,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: richiesto nome e cognome completi per prenotare (ricordato dal telefono).
 - 2026-10-02: pulsante "Paga con Satispay" sempre visibile agli atleti in alto (oltre a quello sotto il proprio turno).
 - 2026-10-02 (script v3): fissi confermano entro mercoledì 14:00 (foglio *Conferme fissi*), poi il posto si libera; pagamenti con metodo Satispay/Contanti/Bonifico (colonna *metodo*); IBAN e info contanti/bonifico per gli atleti.
+- 2026-10-02: pulsante "Manda la lista nel gruppo WhatsApp" visibile solo all'istruttore.
