@@ -63,7 +63,7 @@
     return api({ action: 'state', date: d }).then(function (s) {
       if (d !== curDate) return;
       state = s;
-      if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi }));
+      if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi, satispay: s.config.satispay || '' }));
       render();
     }).catch(function (e) {
       if (/PIN/.test(e.message) && PIN) { PIN = null; lsSet('fv-pin', null); adminCfg = null; return load(); }
@@ -168,6 +168,11 @@
         });
         b.disabled = dis;
         card.append(b);
+        if (inList && cfg.satispay && !state.annullata) {
+          var sp = el('a', 'btn pay-sp', 'Paga ' + eur(cfg.prezzo) + ' con Satispay');
+          sp.href = cfg.satispay; sp.target = '_blank'; sp.rel = 'noopener';
+          card.append(sp);
+        }
       }
       box.append(card);
     });
@@ -216,6 +221,7 @@
     if (focus && $(focus) && box.contains($(focus))) $(focus).focus();
     if (document.activeElement !== $('prezzo')) $('prezzo').value = adminCfg.prezzo;
     if (document.activeElement !== $('posti')) $('posti').value = adminCfg.posti;
+    if (document.activeElement !== $('satispay')) $('satispay').value = adminCfg.satispay || '';
   }
 
   function shareText() {
@@ -249,9 +255,10 @@
   $('toggleDate').onclick = function () { act({ action: 'toggleDate', annullata: !state.annullata }, state.annullata ? 'Serata riattivata' : 'Serata annullata'); };
   $('prezzo').onchange = function () { var v = parseFloat(this.value); if (v >= 0) adminCfg.prezzo = v; };
   $('posti').onchange = function () { var v = parseInt(this.value, 10); if (v > 0) adminCfg.posti = v; };
+  $('satispay').onchange = function () { adminCfg.satispay = this.value.trim(); };
   $('saveCfg').onclick = function () {
     var note = $('cfgNote');
-    api({ action: 'setConfig', prezzo: adminCfg.prezzo, posti: adminCfg.posti, fissi: adminCfg.fissi })
+    api({ action: 'setConfig', prezzo: adminCfg.prezzo, posti: adminCfg.posti, fissi: adminCfg.fissi, satispay: adminCfg.satispay })
       .then(function (r) { adminCfg = JSON.parse(JSON.stringify(r.config)); note.textContent = 'Salvato'; note.className = 'note'; return load(); })
       .catch(function (e) { note.textContent = e.message; note.className = 'note err'; });
   };

@@ -29,7 +29,7 @@ h3{font-size:1.2rem;font-weight:600}
 .toast.err{background:var(--warn-soft);color:var(--warn)}
 .me{display:flex;flex-direction:column;gap:6px;max-width:420px}
 .me label,.settings label{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
-input[type=text],input[type=number],input[type=password]{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;width:100%}
+input[type=text],input[type=number],input[type=password],input[type=url]{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;width:100%}
 .dates{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
 .dates button{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:8px 14px;cursor:pointer;font-family:var(--f-display);font-size:1.1rem;font-weight:600;text-align:left;line-height:1.1}
 .dates button small{display:block;font-family:var(--f-body);font-size:.75rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -95,6 +95,9 @@ form.add input{flex:1;padding:8px 10px}
 .settings{display:flex;gap:16px;flex-wrap:wrap}
 .settings label{display:flex;flex-direction:column;gap:4px}
 .settings input{width:130px}
+.settings .wide{flex:1;min-width:min(100%,280px)}
+.settings .wide input{width:100%}
+.btn.pay-sp{display:block;text-align:center;text-decoration:none;background:#E5243B;border-color:#E5243B;color:#fff}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (max-width:820px){.turni,.fissi{grid-template-columns:minmax(0,1fr)}.totals{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (prefers-reduced-motion:no-preference){.btn,.pay,.dates button{transition:background .15s,border-color .15s,color .15s}}

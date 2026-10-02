@@ -17,7 +17,8 @@ function fvFixConfig(c) {
     prezzo: typeof c.prezzo === 'number' && c.prezzo >= 0 ? c.prezzo : 16,
     posti: c.posti >= 1 && c.posti <= 30 ? Math.round(c.posti) : 6,
     fissi: {},
-    annullate: Array.isArray(c.annullate) ? c.annullate.filter(fvIsWed) : []
+    annullate: Array.isArray(c.annullate) ? c.annullate.filter(fvIsWed) : [],
+    satispay: /^https:\/\/[^\s<>"']+$/.test(String(c.satispay || '').trim()) ? String(c.satispay).trim().slice(0, 300) : ''
   };
   FV_TURNI.forEach(function (t) {
     var list = [];
@@ -46,7 +47,7 @@ function fvState(cfg, st, d, token, admin) {
   });
   var res = {
     date: d, annullata: cfg.annullate.indexOf(d) >= 0, admin: admin, turni: turni,
-    config: { prezzo: cfg.prezzo, posti: cfg.posti }
+    config: { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay }
   };
   if (admin) res.config.fissi = cfg.fissi;
   return res;
@@ -63,7 +64,8 @@ function fvRoute(p, st, nowStr) {
   if (a === 'login') return { admin: true };
   if (a === 'setConfig') {
     if (!admin) throw new Error('Serve il PIN istruttore');
-    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: p.fissi, annullate: cfg.annullate });
+    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: p.fissi, annullate: cfg.annullate, satispay: p.satispay });
+    if (p.satispay && !nc.satispay) throw new Error('Il link Satispay deve iniziare con https://');
     st.setConfig(nc);
     return { config: nc };
   }
