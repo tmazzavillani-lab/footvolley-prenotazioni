@@ -124,3 +124,11 @@ form.add input{flex:1;padding:8px 10px}
 a.btn{text-decoration:none;display:inline-block}
 .vista{margin:0;background:var(--sea-soft);border-radius:12px;padding:10px 14px;font-size:.92rem}
 .vista a{color:var(--sea);font-weight:600}
+
+.guida{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+.guida summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:1.15rem}
+.guida-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:10px}
+.guida h3{font-size:1.05rem;margin-bottom:4px}
+.guida p{margin:0;font-size:.92rem;color:var(--muted);max-width:60ch}
+.guida p b{color:var(--ink)}
+@media (max-width:820px){.guida-col{grid-template-columns:minmax(0,1fr)}}

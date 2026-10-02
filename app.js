@@ -286,6 +286,8 @@
   };
 
   $('demo').hidden = !!API;
+  // Guida aperta alla prima visita, poi chiusa
+  if (!lsGet('fv-guida')) { $('guida').open = true; lsSet('fv-guida', '1'); }
   if (VISTA_ATLETA) { $('adminBox').hidden = true; $('vistaAtleta').hidden = false; }
   var IBAN = (window.FV_IBAN || '').trim();
   if (IBAN) {

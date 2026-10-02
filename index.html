@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 <div class="wrap">
@@ -38,7 +38,23 @@
 
   <a class="btn pay-sp paybar" id="payBar" target="_blank" rel="noopener" hidden>Paga l'allenamento con Satispay</a>
   <p class="payinfo" id="payInfo">Non hai Satispay? Paga in contanti al campo oppure con bonifico: IBAN <b id="iban"></b> <button class="btn small" type="button" id="copyIban">Copia IBAN</button> <span class="hint">Causale: nome, cognome e data dell'allenamento.</span></p>
-  <p class="hint">I fissi trovano il posto già tenuto: toccano <b>Confermo</b> entro mercoledì alle 14:00, altrimenti il posto si libera per gli altri.</p>
+  <details class="guida" id="guida">
+    <summary>Come funziona</summary>
+    <div class="guida-col">
+      <div>
+        <h3>Se sei un fisso</h3>
+        <p>Il tuo posto è già tenuto nel tuo turno. Scrivi nome e cognome in alto (come li ha inseriti l'istruttore) e tocca <b>Confermo</b> entro <b>mercoledì alle 14:00</b>, altrimenti il posto si libera. Se non puoi venire tocca <b>Non vengo</b>.</p>
+      </div>
+      <div>
+        <h3>Se non sei fisso</h3>
+        <p>Scrivi nome e cognome in alto, scegli il mercoledì e tocca <b>Prenota</b> nel turno con posti liberi (max 6). Puoi annullare dallo stesso telefono fino all'inizio del turno.</p>
+      </div>
+      <div>
+        <h3>Pagamento</h3>
+        <p>€16 ad allenamento con Satispay, in contanti al campo o con bonifico. Il pallino accanto al nome diventa verde quando l'istruttore registra il pagamento.</p>
+      </div>
+    </div>
+  </details>
   <div class="banner" id="annullata" hidden>Allenamento annullato per questa data.</div>
   <div class="toast" id="toast" role="status" hidden></div>
 
@@ -77,8 +93,8 @@
     </div>
   </section>
 </div>
-<script src="config.js?v=13"></script>
-<script src="core.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="config.js?v=14"></script>
+<script src="core.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>

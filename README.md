@@ -70,3 +70,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02 (script v4): ogni fisso è collegato al primo telefono che conferma/segna assenza (foglio *Telefoni fissi*); per cambiarlo cancellare la riga nel foglio.
 - 2026-10-02: tolto il pulsante di condivisione WhatsApp.
 - 2026-10-02: pallino pagamento accanto a ogni nome (verde pagato, rosso da pagare); vista atleta con ?atleta (pulsante "Vedi come atleta").
+- 2026-10-02: sezione "Come funziona" (fissi / non fissi / pagamento), aperta alla prima visita.
