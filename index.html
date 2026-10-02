@@ -6,7 +6,7 @@
 <title>Ravenna Footvolley · Prenotazioni</title>
 <script>
   // Se il browser (anche quello di WhatsApp) ha in memoria una pagina vecchia, ricarica quella nuova
-  window.FV_VERSIONE = 34;
+  window.FV_VERSIONE = 35;
   (function () {
     try {
       fetch('versione.txt?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (v) {
@@ -26,7 +26,7 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=34">
+<link rel="stylesheet" href="style.css?v=35">
 </head>
 <body>
 <div class="wrap">
@@ -62,8 +62,6 @@
 
   <nav class="dates" id="dates" aria-label="Scegli il mercoledì"></nav>
 
-  <a class="btn pay-sp paybar" id="payBar" target="_blank" rel="noopener" hidden>Paga l'allenamento con Satispay</a>
-  <p class="payinfo" id="payInfo">Non hai Satispay? Paga in contanti al campo oppure con bonifico: IBAN <b id="iban"></b> <button class="btn small" type="button" id="copyIban">Copia IBAN</button> <span class="hint">Causale: nome, cognome e data dell'allenamento.</span></p>
   <details class="guida" id="guida">
     <summary>Come funziona</summary>
     <div class="guida-col">
@@ -89,6 +87,12 @@
   <div class="toast" id="toast" role="status" hidden></div>
 
   <div class="turni" id="turni"><p class="empty">Caricamento dei turni…</p></div>
+
+  <section class="pagamento" id="pagamento">
+    <h2>Pagamento</h2>
+    <a class="btn pay-sp paybar" id="payBar" target="_blank" rel="noopener" hidden>Paga l'allenamento con Satispay</a>
+    <p class="payinfo" id="payInfo">Non hai Satispay? Paga in contanti al campo oppure con bonifico: IBAN <b id="iban"></b> <button class="btn small" type="button" id="copyIban">Copia IBAN</button> <span class="hint">Causale: nome, cognome e data dell'allenamento.</span></p>
+  </section>
 
   <p class="vista" id="vistaAtleta" hidden>Stai guardando l'app come la vede un atleta. <a href="./">Torna alla vista istruttore</a></p>
 
@@ -127,8 +131,8 @@
     </div>
   </section>
 </div>
-<script src="config.js?v=34"></script>
-<script src="core.js?v=34"></script>
-<script src="app.js?v=34"></script>
+<script src="config.js?v=35"></script>
+<script src="core.js?v=35"></script>
+<script src="app.js?v=35"></script>
 </body>
 </html>

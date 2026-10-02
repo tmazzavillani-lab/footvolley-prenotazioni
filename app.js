@@ -154,7 +154,8 @@
       var b = el('button', d < next ? 'past' : ''); b.type = 'button';
       b.setAttribute('aria-pressed', d === curDate);
       if (d === curDate) sel = b;
-      b.append(el('small', null, d < next ? 'concluso' : dateLabel(d, { weekday: 'long' })), document.createTextNode(dateLabel(d, { day: 'numeric', month: 'long' })));
+      b.append(el('small', null, d < next ? 'concluso' : 'mer'), document.createTextNode(dateLabel(d, { day: 'numeric', month: 'short' })));
+      b.setAttribute('aria-label', dateLabel(d, { weekday: 'long', day: 'numeric', month: 'long' }));
       b.onclick = function () {
         if (d === curDate) return; curDate = d; renderDates();
         if (cacheSerate[d]) { state = cacheSerate[d]; render(); load(); }
@@ -162,6 +163,7 @@
       };
       box.append(b);
     });
+    box.classList.toggle('quattro', box.children.length <= 4);
     if (sel) box.scrollLeft = Math.max(0, sel.offsetLeft - box.offsetLeft - 8);
   }
 

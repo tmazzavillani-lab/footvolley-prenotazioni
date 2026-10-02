@@ -30,7 +30,7 @@ h3{font-size:1.2rem;font-weight:600}
 .toast.err{background:var(--warn-soft);color:var(--warn)}
 .me{display:flex;flex-direction:column;gap:6px;max-width:420px}
 .me label,.settings label{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
-input[type=text],input[type=number],input[type=password],input[type=url]{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;width:100%}
+input[type=text],input[type=number],input[type=password],input[type=url],input[type=email]{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;width:100%}
 .dates{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
 .dates button{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:8px 14px;cursor:pointer;font-family:var(--f-display);font-size:1.1rem;font-weight:600;text-align:left;line-height:1.1}
 .dates button small{display:block;font-family:var(--f-body);font-size:.75rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -170,3 +170,20 @@ body.busy #turni button,body.busy #turni .pay{pointer-events:none;opacity:.6}
 input.pin{-webkit-text-security:disc;text-security:disc}
 
 .logo{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+
+/* Mobile */
+.dates.quattro{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible}
+.dates.quattro button{text-align:center;padding:8px 4px}
+.pagamento{display:flex;flex-direction:column;gap:10px}
+.pagamento h2{font-size:1.3rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;max-width:min(92vw,520px);box-shadow:0 6px 20px rgba(0,0,0,.18);text-align:center}
+@media (max-width:600px){
+  .wrap{padding-block:12px 40px;gap:14px}
+  header{gap:12px;flex-wrap:nowrap}
+  .logo{width:84px}
+  h1{font-size:1.5rem}
+  .club{font-size:.85rem}
+  .sub{font-size:.8rem}
+  .dates button{font-size:1rem}
+  .thead h3{font-size:1.4rem}
+}

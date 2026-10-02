@@ -85,3 +85,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02 (script v12): sicurezza area istruttore: PIN solo per la sessione (sessionStorage, cancellato chiudendo la scheda) e uscita automatica dopo 30 min di inattività; campo PIN non salvabile dal browser; blocco 15 min dopo 5 PIN sbagliati (CacheService). Messaggi "dispositivo" invece di "telefono".
 - 2026-10-02: Area istruttore nascosta: si apre toccando il logo 5 volte o con il link .../#tg-staff; si richiude con Esci o per inattività.
 - 2026-10-02: 5 tocchi sul logo anche per richiudere l'area (ed esce). Aggiornamento automatico: index.html confronta FV_VERSIONE con versione.txt e ricarica se c'è una versione nuova (anche nel browser di WhatsApp). AD OGNI MODIFICA: aumentare insieme versione.txt, FV_VERSIONE e ?v=N in index.html.
+- 2026-10-02 (v35): mobile: 4 mercoledì in una riga, intestazione compatta, pagamento sotto i turni, messaggi fluttuanti in basso.
