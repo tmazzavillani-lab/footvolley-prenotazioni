@@ -78,3 +78,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: promemoria settimanale per i fissi (promemoria.ics e link Google Calendar, mercoledì 9:00) nella guida.
 - 2026-10-02: istruttore: "Togli conferma" sui fissi confermati (tornano posto riservato).
 - 2026-10-02 (script v9): turno 17-18 (4 posti di default), posti per turno modificabili dall'Area istruttore; script più veloce (ogni foglio letto una volta per richiesta); riscontro immediato "Un attimo…" nell'app.
+- 2026-10-02: aggiornamento immediato dell'interfaccia al tocco (poi confermato dallo script).

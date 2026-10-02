@@ -83,9 +83,41 @@
     toast('Un attimo…');
     p.date = curDate;
     var ok = false;
+    try { ottimista(p); render(); } catch (e) { }
     api(p).then(function (s) { state = s; render(); if (okMsg) toast(okMsg); ok = true; })
       .catch(function (e) { toast(e.message, true); load(); })
       .then(function () { busy = false; document.body.style.cursor = ''; document.body.classList.remove('busy'); if (ok && then) then(); });
+  }
+
+  // Mostra subito il risultato atteso; la risposta dello script poi lo conferma o lo corregge
+  function ottimista(p) {
+    if (!state || !p.turno && !p.id) return;
+    var tk = p.turno, t = tk && state.turni[tk];
+    var trova = function (lista, n) { return lista.filter(function (x) { return fvNorm(x.nome) === fvNorm(n); })[0]; };
+    if (p.action === 'book' || p.action === 'add') {
+      var r = trova(t.people, p.nome);
+      if (r && r.riservato) { r.riservato = false; r.mine = p.action === 'book'; r.id = 'tmp'; }
+      else if (!r) { t.people.push({ id: 'tmp', nome: p.nome, fisso: false, mine: p.action === 'book' }); t.count++; }
+      t.assenti = t.assenti.filter(function (n) { return fvNorm(n) !== fvNorm(p.nome); });
+    } else if (p.action === 'cancel') {
+      FV_TURNI.forEach(function (T) {
+        var tt = state.turni[T.k];
+        tt.people.forEach(function (x, i) {
+          if (x.id !== p.id) return;
+          if (x.fisso && state.admin) { tt.people[i] = { nome: x.nome, fisso: true, riservato: true }; }
+          else { tt.people.splice(i, 1); tt.count--; if (x.fisso) tt.assenti.push(x.nome); }
+        });
+      });
+    } else if (p.action === 'absent') {
+      t.people = t.people.filter(function (x) { if (fvNorm(x.nome) === fvNorm(p.nome)) { t.count--; return false; } return true; });
+      t.assenti.push(p.nome);
+    } else if (p.action === 'declare') {
+      var d = trova(t.people, p.nome);
+      if (d) { d.dichiarato = !p.undo; d.metodo = p.undo ? '' : p.metodo; }
+    } else if (p.action === 'pay') {
+      var g = trova(t.people, p.nome);
+      if (g) { g.pagato = !!p.paid; if (p.paid) { g.metodo = p.metodo || g.metodo; g.dichiarato = false; } }
+    }
   }
 
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
