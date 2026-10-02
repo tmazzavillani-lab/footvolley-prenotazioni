@@ -172,8 +172,8 @@
     ver.hidden = admin || !io || !me || fvNorm(io.nome) !== fvNorm(me);
     if (!ver.hidden) {
       ver.classList.toggle('ok', io.verificato);
-      $('verStato').textContent = io.verificato ? '✓ Nome verificato su questo telefono' : io.registrato
-        ? 'Questo nome è già verificato su un altro telefono: inserisci la stessa email per ricevere il codice.'
+      $('verStato').textContent = io.verificato ? '✓ Nome verificato su questo dispositivo' : io.registrato
+        ? 'Questo nome è già verificato su un altro dispositivo: inserisci la stessa email per ricevere il codice.'
         : 'Per prenotarti verifica il tuo nome, una volta sola: ti mandiamo un codice via email.';
       $('verInviaForm').hidden = io.verificato;
       if (io.verificato) $('verCodiceForm').hidden = true;
@@ -202,7 +202,7 @@
       var ul = el('ul', 'people'), inList = false, mioRiservato = false;
       t.people.forEach(function (p) {
         var nomeMio = !!me && fvNorm(p.nome) === fvNorm(me), isMe = p.mine || nomeMio;
-        // il pulsante del turno segue il nome scritto in alto (dallo stesso telefono si può prenotare anche per un amico)
+        // il pulsante del turno segue il nome scritto in alto (dallo stesso dispositivo si può prenotare anche per un amico)
         if (nomeMio && p.riservato) mioRiservato = true; else if (nomeMio) inList = true;
         var prezzo = p.prezzo != null ? p.prezzo : cfg.prezzo, free = !!p.gratis;
         if (admin) {
