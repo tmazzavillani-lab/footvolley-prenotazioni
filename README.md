@@ -79,3 +79,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: istruttore: "Togli conferma" sui fissi confermati (tornano posto riservato).
 - 2026-10-02 (script v9): turno 17-18 (4 posti di default), posti per turno modificabili dall'Area istruttore; script più veloce (ogni foglio letto una volta per richiesta); riscontro immediato "Un attimo…" nell'app.
 - 2026-10-02: aggiornamento immediato dell'interfaccia al tocco (poi confermato dallo script).
+- 2026-10-02 (script v10): i prezzi concordati tornano all'Area istruttore (prima il riquadro si svuotava dopo il ricaricamento). Scritte pagamento atleta: Da pagare / Pagato con X · in attesa di conferma / Pagamento confermato.

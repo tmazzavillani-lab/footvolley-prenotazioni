@@ -119,7 +119,7 @@ function fvState(cfg, st, d, token, admin, nowStr) {
     date: d, annullata: cfg.annullate.indexOf(d) >= 0, admin: admin, turni: turni, scaduta: scaduta, oraConferma: FV_ORA_CONFERMA,
     config: { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay }
   };
-  if (admin) { var pc = fvPublicConfig(cfg); res.config.fissi = pc.fissi; res.config.postiTurno = pc.postiTurno; }
+  if (admin) { var pc = fvPublicConfig(cfg); res.config.fissi = pc.fissi; res.config.postiTurno = pc.postiTurno; res.config.speciali = pc.speciali; }
   return res;
 }
 

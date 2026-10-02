@@ -215,12 +215,13 @@
           var mio = !!p.mine;
           if (!mio) { /* i pagamenti degli altri non si vedono */ }
           else if (free && !p.pagato) li.append(el('span', 'paid ok', 'Gratis'));
-          else if (p.pagato) li.append(el('span', 'paid ok', p.metodo === 'prova' ? 'Prova gratuita' : 'Pagato'));
+          else if (p.pagato) li.append(el('span', 'paid ok', p.metodo === 'prova' ? 'Prova gratuita' : 'Pagamento confermato'));
           else if (p.dichiarato) {
-            li.append(el('span', 'paid wait', (METODI[p.metodo] || 'Pagato') + ' · da verificare'));
+            li.append(el('span', 'paid wait', 'Pagato con ' + (METODI[p.metodo] || '?') + ' · in attesa di conferma'));
             if (mio) li.append(btn('link back', 'Correggi', function () { act({ action: 'declare', turno: T.k, nome: p.nome, undo: true }, 'Ok, puoi scegliere di nuovo il metodo'); }, 'Hai sbagliato metodo? Toglilo e riscegli'));
           } else if (mio && !state.annullata) {
-            var ask = el('span', 'payask'); ask.append(el('span', null, prezzo !== cfg.prezzo ? 'Ho pagato ' + eur(prezzo) + ' con:' : 'Ho pagato con:'));
+            li.append(el('span', 'paid no', 'Da pagare' + (prezzo !== cfg.prezzo ? ' ' + eur(prezzo) : '')));
+            var ask = el('span', 'payask'); ask.append(el('span', null, 'Ho pagato con:'));
             Object.keys(METODI).forEach(function (m) {
               ask.append(btn('pay', METODI[m], function () { act({ action: 'declare', turno: T.k, nome: p.nome, metodo: m }, 'Grazie! L’istruttore verificherà il pagamento'); }));
             });
