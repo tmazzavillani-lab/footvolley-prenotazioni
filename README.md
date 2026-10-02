@@ -72,3 +72,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: pallino pagamento accanto a ogni nome (verde pagato, rosso da pagare); vista atleta con ?atleta (pulsante "Vedi come atleta").
 - 2026-10-02: sezione "Come funziona" (fissi / non fissi / pagamento), aperta alla prima visita.
 - 2026-10-02 (script v5): i ragazzi segnano "Ho pagato con" (Satispay/Contanti/Bonifico) -> giallo; l'istruttore preme Verifica -> verde. Metodo "Prova gratuita" solo istruttore (escluso dagli incassi), anche come spunta quando aggiunge un nome.
+- 2026-10-02 (script v6): prezzi concordati per persona (Area istruttore, "Nome Cognome = 10" o "= gratis"); visibili solo all'istruttore e al diretto interessato; chi è gratis risulta in regola agli altri; incassi calcolati sul prezzo di ciascuno.

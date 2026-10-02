@@ -20,8 +20,12 @@ function fvFixConfig(c) {
     posti: c.posti >= 1 && c.posti <= 30 ? Math.round(c.posti) : 6,
     fissi: {},
     annullate: Array.isArray(c.annullate) ? c.annullate.filter(fvIsWed) : [],
-    satispay: /^https:\/\/[^\s<>\x22\x27]+$/.test(String(c.satispay || '').trim()) ? String(c.satispay).trim().slice(0, 300) : ''
+    satispay: /^https:\/\/[^\s<>\x22\x27]+$/.test(String(c.satispay || '').trim()) ? String(c.satispay).trim().slice(0, 300) : '',
+    speciali: {}
   };
+  // prezzi concordati: { 'Nome Cognome': 10 }, 0 = gratis
+  var sp = c.speciali && typeof c.speciali === 'object' ? c.speciali : {};
+  Object.keys(sp).slice(0, 200).forEach(function (n) { var v = Number(sp[n]), nn = fvClean(n); if (nn && sp[n] !== '' && v >= 0 && v <= 999) out.speciali[nn] = Math.round(v * 100) / 100; });
   // fissi[k] = storico [{nome, dal, al?}]: conta nei mercoledì con dal <= data < al
   FV_TURNI.forEach(function (t) {
     var list = [];
@@ -47,7 +51,11 @@ function fvFissiAl(cfg, k, d) {
 function fvPublicConfig(cfg) {
   var f = {};
   FV_TURNI.forEach(function (t) { f[t.k] = fvFissiOggi(cfg.fissi[t.k] || []); });
-  return { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay, fissi: f };
+  return { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay, fissi: f, speciali: cfg.speciali };
+}
+function fvPrezzo(cfg, nome) {
+  var k = Object.keys(cfg.speciali).filter(function (n) { return fvNorm(n) === fvNorm(nome); })[0];
+  return k != null ? cfg.speciali[k] : cfg.prezzo;
 }
 // Applica la nuova lista di fissi (nomi) allo storico: nuovi da oggi, tolti fino a oggi
 function fvAggiornaFissi(storico, nomi, oggi) {
@@ -99,6 +107,9 @@ function fvState(cfg, st, d, token, admin, nowStr) {
       var same = function (r) { return r.turno === k && fvNorm(r.nome) === fvNorm(x.nome); };
       var g = G.filter(same)[0], dd = D.filter(same)[0];
       x.pagato = !!g;
+      var pz = fvPrezzo(cfg, x.nome);
+      if (admin || x.mine || x.telefono === 'mio') x.prezzo = pz;
+      if (pz === 0) x.gratis = true;
       if (g) x.metodo = g.metodo || '';
       if (!g && dd) { x.dichiarato = true; x.metodo = dd.metodo || ''; }
     });
@@ -125,7 +136,7 @@ function fvRoute(p, st, nowStr) {
     if (!admin) throw new Error('Serve il PIN istruttore');
     var oggi = nowStr.slice(0, 10), nf = {}, pf = p.fissi || {};
     FV_TURNI.forEach(function (t) { nf[t.k] = fvAggiornaFissi(cfg.fissi[t.k], pf[t.k], oggi); });
-    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay });
+    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay, speciali: p.speciali });
     if (p.satispay && !nc.satispay) throw new Error('Il link Satispay deve iniziare con https://');
     st.setConfig(nc);
     return { config: fvPublicConfig(nc) };

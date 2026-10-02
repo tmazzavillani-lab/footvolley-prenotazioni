@@ -69,7 +69,7 @@
     return api({ action: 'state', date: d }).then(function (s) {
       if (d !== curDate) return;
       state = s;
-      if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi, satispay: s.config.satispay || '' }));
+      if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi, satispay: s.config.satispay || '', speciali: s.config.speciali || {} }));
       render();
     }).catch(function (e) {
       if (/PIN/.test(e.message) && PIN) { PIN = null; lsSet('fv-pin', null); adminCfg = null; return load(); }
@@ -121,7 +121,7 @@
     var keep = {}, foc = document.activeElement && document.activeElement.id;
     FV_TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x) keep[T.k] = x.value; });
     var box = $('turni'); box.replaceChildren();
-    var tot = 0, paid = 0, prove = 0, perMetodo = { satispay: 0, contanti: 0, bonifico: 0 };
+    var tot = 0, prove = 0, gratis = 0, previsto = 0, incassato = 0, perMetodo = { satispay: 0, contanti: 0, bonifico: 0 };
     var myTurn = null;
     if (me) FV_TURNI.forEach(function (T) { if (state.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(me); })) myTurn = myTurn || T; });
     FV_TURNI.forEach(function (T) {
@@ -139,15 +139,26 @@
       t.people.forEach(function (p) {
         var isMe = p.mine || (me && fvNorm(p.nome) === fvNorm(me));
         if (isMe) inList = true;
-        if (admin && p.pagato) { if (p.metodo === 'prova') prove++; else { paid++; if (perMetodo[p.metodo] != null) perMetodo[p.metodo]++; } }
+        var prezzo = p.prezzo != null ? p.prezzo : cfg.prezzo, free = !!p.gratis;
+        if (admin) {
+          if (p.pagato && p.metodo === 'prova') prove++;
+          else if (free) gratis++;
+          else {
+            previsto += prezzo;
+            if (p.pagato) { incassato += prezzo; if (perMetodo[p.metodo] != null) perMetodo[p.metodo] += prezzo; }
+          }
+        }
         var daConf = p.fisso && !p.confermato;
         var li = el('li', 'p' + (isMe ? ' mine' : ''));
-        var dot = el('span', 'dot' + (p.pagato ? ' ok' : p.dichiarato ? ' wait' : ''));
-        dot.title = p.pagato ? 'Pagato' : p.dichiarato ? 'Pagamento da verificare' : 'Da pagare';
+        var dot = el('span', 'dot' + (p.pagato || free ? ' ok' : p.dichiarato ? ' wait' : ''));
+        dot.title = free ? 'Gratis' : p.pagato ? 'Pagato' : p.dichiarato ? 'Pagamento da verificare' : 'Da pagare';
         dot.setAttribute('aria-label', dot.title);
         li.append(dot, el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? (daConf ? ' wait' : '') : ' x'), p.fisso ? (daConf ? 'da confermare' : 'fisso ✓') : 'aggiunto'));
+        if (admin && prezzo !== cfg.prezzo) li.append(el('span', 'tag prezzo', free ? 'gratis' : eur(prezzo)));
         if (admin) {
-          if (p.pagato) {
+          if (free && !p.pagato) {
+            li.append(el('span', 'paid ok', 'Non paga'));
+          } else if (p.pagato) {
             li.append(btn('pay on', '✓ ' + (METODI_ADMIN[p.metodo] || 'Pagato'), function () {
               act({ action: 'pay', turno: T.k, nome: p.nome, paid: false });
             }, 'Tocca per togliere il pagato'));
@@ -166,12 +177,13 @@
           }));
         } else {
           var mio = p.mine || (p.fisso && isMe && p.telefono !== 'altro');
-          if (p.pagato) li.append(el('span', 'paid ok', p.metodo === 'prova' ? 'Prova gratuita' : 'Pagato'));
+          if (mio && free && !p.pagato) li.append(el('span', 'paid ok', 'Gratis'));
+          else if (p.pagato || free) li.append(el('span', 'paid ok', p.metodo === 'prova' ? 'Prova gratuita' : 'Pagato'));
           else if (p.dichiarato) {
             li.append(el('span', 'paid wait', (METODI[p.metodo] || 'Pagato') + ' · da verificare'));
             if (mio) li.append(btn('link back', 'Correggi', function () { act({ action: 'declare', turno: T.k, nome: p.nome, undo: true }, 'Ok, puoi scegliere di nuovo il metodo'); }, 'Hai sbagliato metodo? Toglilo e riscegli'));
           } else if (mio && !state.annullata) {
-            var ask = el('span', 'payask'); ask.append(el('span', null, 'Ho pagato con:'));
+            var ask = el('span', 'payask'); ask.append(el('span', null, prezzo !== cfg.prezzo ? 'Ho pagato ' + eur(prezzo) + ' con:' : 'Ho pagato con:'));
             Object.keys(METODI).forEach(function (m) {
               ask.append(btn('pay', METODI[m], function () { act({ action: 'declare', turno: T.k, nome: p.nome, metodo: m }, 'Grazie! L’istruttore verificherà il pagamento'); }));
             });
@@ -242,11 +254,12 @@
     $('login').hidden = admin;
     $('adminPanel').hidden = !admin;
     if (admin) {
-      $('tPres').textContent = tot + (prove ? ' (' + prove + ' in prova)' : '');
-      $('tPrev').textContent = eur((tot - prove) * cfg.prezzo);
-      $('tPaid').textContent = eur(paid * cfg.prezzo);
-      $('tMetodi').textContent = Object.keys(METODI).map(function (m) { return METODI[m] + ' ' + eur(perMetodo[m] * cfg.prezzo); }).join(' · ');
-      $('tDue').textContent = eur((tot - prove - paid) * cfg.prezzo);
+      var extra = []; if (prove) extra.push(prove + ' in prova'); if (gratis) extra.push(gratis + ' gratis');
+      $('tPres').textContent = tot + (extra.length ? ' (' + extra.join(', ') + ')' : '');
+      $('tPrev').textContent = eur(previsto);
+      $('tPaid').textContent = eur(incassato);
+      $('tMetodi').textContent = Object.keys(METODI).map(function (m) { return METODI[m] + ' ' + eur(perMetodo[m]); }).join(' · ');
+      $('tDue').textContent = eur(previsto - incassato);
       $('toggleDate').textContent = state.annullata ? 'Riattiva questa serata' : 'Annulla questa serata';
       renderFissi();
     }
@@ -282,6 +295,7 @@
     if (document.activeElement !== $('prezzo')) $('prezzo').value = adminCfg.prezzo;
     if (document.activeElement !== $('posti')) $('posti').value = adminCfg.posti;
     if (document.activeElement !== $('satispay')) $('satispay').value = adminCfg.satispay || '';
+    if (document.activeElement !== $('speciali')) $('speciali').value = Object.keys(adminCfg.speciali || {}).map(function (n) { return n + ' = ' + (adminCfg.speciali[n] === 0 ? 'gratis' : adminCfg.speciali[n]); }).join('\n');
   }
 
   // --- eventi ---
@@ -299,9 +313,22 @@
   $('prezzo').onchange = function () { var v = parseFloat(this.value); if (v >= 0) adminCfg.prezzo = v; };
   $('posti').onchange = function () { var v = parseInt(this.value, 10); if (v > 0) adminCfg.posti = v; };
   $('satispay').onchange = function () { adminCfg.satispay = this.value.trim(); };
+  $('speciali').onchange = function () {
+    var out = {}, bad = [];
+    this.value.split(/\r?\n/).forEach(function (r) {
+      if (!r.trim()) return;
+      var m = r.split('=');
+      var n = fvClean(m[0]), v = (m[1] || '').trim().toLowerCase().replace('€', '').replace(',', '.');
+      var num = v === 'gratis' ? 0 : Number(v);
+      if (!n || v === '' || !(num >= 0)) bad.push(r.trim()); else out[n] = num;
+    });
+    adminCfg.speciali = out;
+    $('cfgNote').textContent = bad.length ? 'Righe non capite: ' + bad.join(', ') : 'Modifiche da salvare';
+    $('cfgNote').className = 'note err';
+  };
   $('saveCfg').onclick = function () {
     var note = $('cfgNote');
-    api({ action: 'setConfig', prezzo: adminCfg.prezzo, posti: adminCfg.posti, fissi: adminCfg.fissi, satispay: adminCfg.satispay })
+    api({ action: 'setConfig', prezzo: adminCfg.prezzo, posti: adminCfg.posti, fissi: adminCfg.fissi, satispay: adminCfg.satispay, speciali: adminCfg.speciali })
       .then(function (r) { adminCfg = JSON.parse(JSON.stringify(r.config)); note.textContent = 'Salvato'; note.className = 'note'; return load(); })
       .catch(function (e) { note.textContent = e.message; note.className = 'note err'; });
   };
