@@ -110,6 +110,9 @@
     var admin = state.admin, cfg = state.config, me = myName(), now = nowRome();
     $('subline').textContent = '18–19 · 19–20 · 20–21 · ' + eur(cfg.prezzo) + ' a persona · max ' + cfg.posti + ' per turno';
     $('annullata').hidden = !state.annullata;
+    var pay = $('payBar');
+    pay.hidden = !cfg.satispay || state.annullata;
+    if (cfg.satispay) { pay.href = cfg.satispay; pay.textContent = 'Paga ' + eur(cfg.prezzo) + ' con Satispay'; }
     var keep = {}, foc = document.activeElement && document.activeElement.id;
     FV_TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x) keep[T.k] = x.value; });
     var box = $('turni'); box.replaceChildren();
