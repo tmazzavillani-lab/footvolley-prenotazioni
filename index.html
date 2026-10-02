@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=27">
+<link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 <div class="wrap">
@@ -32,6 +32,19 @@
     <label for="nome">Nome e cognome</label>
     <input type="text" id="nome" maxlength="40" autocomplete="name" placeholder="Nome e cognome (es. Marco Rossi)">
     <span class="hint">Lo scrivi una volta sola: questo telefono se lo ricorda.</span>
+    <div class="verifica" id="verifica" hidden>
+      <p id="verStato"></p>
+      <form class="row" id="verInviaForm">
+        <label for="verEmail" class="sr">La tua email</label>
+        <input type="email" id="verEmail" autocomplete="email" placeholder="La tua email">
+        <button class="btn primary" type="submit">Invia codice</button>
+      </form>
+      <form class="row" id="verCodiceForm" hidden>
+        <label for="verCodice" class="sr">Codice ricevuto</label>
+        <input type="text" id="verCodice" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="Codice di 6 cifre">
+        <button class="btn primary" type="submit">Conferma</button>
+      </form>
+    </div>
   </section>
 
   <nav class="dates" id="dates" aria-label="Scegli il mercoledì"></nav>
@@ -43,12 +56,11 @@
     <div class="guida-col">
       <div>
         <h3>Se sei un fisso</h3>
-        <p>Il tuo nome compare nel tuo turno come <b>posto riservato</b>. Scrivi in alto nome e cognome (come li ha inseriti l'istruttore) e tocca <b>Conferma il tuo posto</b> entro <b>mercoledì alle 14:00</b>, altrimenti il posto si libera da solo. Se dopo aver confermato non puoi più venire, tocca <b>Non vengo</b>.</p>
-        <p class="promemoria">Per non dimenticarti, aggiungi il promemoria del mercoledì al calendario: <a class="btn small" href="promemoria.ics">iPhone / altri calendari</a> <a class="btn small" href="https://calendar.google.com/calendar/render?action=TEMPLATE&amp;text=Conferma+allenamento+footvolley+%28entro+le+14%29&amp;dates=20261007T090000%2F20261007T091500&amp;ctz=Europe%2FRome&amp;recur=RRULE%3AFREQ%3DWEEKLY%3BBYDAY%3DWE&amp;details=Apri+l%27app+e+tocca+%22Conferma+il+tuo+posto%22+entro+le+14%3A00.+https%3A%2F%2Ftmazzavillani-lab.github.io%2Ffootvolley-prenotazioni%2F" target="_blank" rel="noopener">Google Calendar</a></p>
+        <p>Il tuo nome compare nel tuo turno come <b>posto riservato</b>. Scrivi in alto nome e cognome (come li ha inseriti l'istruttore), verificali con l'email la prima volta e tocca <b>Conferma il tuo posto</b> entro <b>mercoledì alle 14:00</b>, altrimenti il posto si libera da solo. Se dopo aver confermato non puoi più venire, tocca <b>Non vengo</b>.</p>
       </div>
       <div>
         <h3>Se non sei fisso</h3>
-        <p>Scrivi nome e cognome in alto, scegli il mercoledì e tocca <b>Prenota</b> nel turno con posti liberi. Puoi annullare dallo stesso telefono fino all'inizio del turno.</p>
+        <p>Scrivi nome e cognome in alto e, la prima volta, verificali con il codice che ricevi via email. Poi scegli il mercoledì e tocca <b>Prenota</b> nel turno con posti liberi. Puoi annullare dallo stesso telefono fino all'inizio del turno.</p>
       </div>
       <div>
         <h3>Pagamento</h3>
@@ -91,11 +103,15 @@
         <label for="speciali" class="wide">Prezzi concordati (uno per riga: Nome Cognome = 10, oppure = gratis)<textarea id="speciali" rows="4" placeholder="Marco Rossi = gratis&#10;Luca Bianchi = 10"></textarea></label>
       </div>
       <div class="row"><button class="btn primary" id="saveCfg">Salva fissi e impostazioni</button><span class="note" id="cfgNote"></span></div>
+      <h3>Atleti verificati</h3>
+      <p class="hint">Ogni nome è legato all'email con cui è stato verificato. Se qualcuno ha registrato un nome non suo, o un ragazzo cambia email, tocca <b>Sblocca</b>: dovrà verificarsi di nuovo.</p>
+      <div class="row"><button class="btn small" id="atletiBtn" type="button">Mostra elenco</button></div>
+      <ul class="atleti" id="atleti"></ul>
     </div>
   </section>
 </div>
-<script src="config.js?v=27"></script>
-<script src="core.js?v=27"></script>
-<script src="app.js?v=27"></script>
+<script src="config.js?v=28"></script>
+<script src="core.js?v=28"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>

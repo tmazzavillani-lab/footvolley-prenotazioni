@@ -123,6 +123,67 @@ function fvState(cfg, st, d, token, admin, nowStr) {
   return res;
 }
 
+// --- Verifica del nome con un codice via email (una volta per telefono) ---
+function fvEmailOk(e) { return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(e); }
+function fvMask(e) { var p = String(e).split('@'); return p[0].slice(0, 2) + '***@' + (p[1] || ''); }
+function fvMinuti(s) { return Date.parse(String(s).replace(' ', 'T') + ':00Z') / 60000; }
+function fvVerificato(st, nome, token) {
+  return !!token && st.list('U').some(function (r) { return r.verificato === 'si' && r.token === token && fvNorm(r.nome) === fvNorm(nome); });
+}
+function fvRegistrato(st, nome) {
+  return st.list('U').filter(function (r) { return r.verificato === 'si' && fvNorm(r.nome) === fvNorm(nome); })[0];
+}
+function fvVerifica(a, p, st, nowStr, admin) {
+  var token = String(p.token || ''), nm = fvClean(p.nome);
+  if (a === 'verificaInvia') {
+    var em = String(p.email || '').trim().toLowerCase().slice(0, 100);
+    if (!nm || nm.split(' ').length < 2) throw new Error('Scrivi prima nome e cognome completi');
+    if (!fvEmailOk(em)) throw new Error('Email non valida');
+    if (!token) throw new Error('Telefono non riconosciuto');
+    var reg = fvRegistrato(st, nm);
+    if (reg && reg.email !== em) throw new Error(nm + ' è già registrato con un’altra email (' + fvMask(reg.email) + '). Se è un errore chiedi all’istruttore.');
+    var oggi = nowStr.slice(0, 10);
+    var inviati = st.list('U').filter(function (r) { return r.email === em && r.verificato !== 'si' && String(r.creato).slice(0, 10) === oggi; }).length;
+    if (inviati >= 5) throw new Error('Troppi codici richiesti oggi per questa email: riprova domani o chiedi all’istruttore');
+    st.removeWhere('U', function (r) { return r.token === token && r.verificato !== 'si'; });
+    var codice = String(Math.floor(100000 + Math.random() * 900000));
+    st.add('U', { nome: nm, email: em, token: token, verificato: '', codice: codice, creato: nowStr });
+    st.sendMail(em, 'Codice ' + codice + ' - Ravenna Footvolley',
+      'Ciao ' + nm + ',\n\nil tuo codice per l’app delle prenotazioni è: ' + codice + '\n\nScade tra 30 minuti. Se non l’hai richiesto tu, ignora questa email.\n\nRavenna Footvolley - T&G Academy a.s.d.');
+    var out = { inviata: true, email: fvMask(em) };
+    if (st.demo) out.codiceDemo = codice;
+    return out;
+  }
+  if (a === 'verificaConferma') {
+    var c = String(p.codice || '').trim();
+    var row = st.list('U').filter(function (r) { return r.token === token && r.verificato !== 'si' && fvNorm(r.nome) === fvNorm(nm) && r.codice === c; })[0];
+    if (!token || !row) throw new Error('Codice errato: controlla l’email o richiedine uno nuovo');
+    if (fvMinuti(nowStr) - fvMinuti(row.creato) > 30) throw new Error('Codice scaduto: richiedine uno nuovo');
+    var reg2 = fvRegistrato(st, row.nome);
+    if (reg2 && reg2.email !== row.email) throw new Error(row.nome + ' è già registrato con un’altra email');
+    st.removeWhere('U', function (r) { return r.token === token && (r.verificato !== 'si' || fvNorm(r.nome) === fvNorm(row.nome)); });
+    st.add('U', { nome: row.nome, email: row.email, token: token, verificato: 'si', codice: '', creato: nowStr });
+    return { verificato: true, nome: row.nome };
+  }
+  if (a === 'atleti') {
+    if (!admin) throw new Error('Serve il PIN istruttore');
+    var by = {};
+    st.list('U').forEach(function (r) {
+      if (r.verificato !== 'si') return;
+      var k = fvNorm(r.nome);
+      if (!by[k]) by[k] = { nome: r.nome, email: r.email, telefoni: 0 };
+      by[k].telefoni++;
+    });
+    return { atleti: Object.keys(by).sort().map(function (k) { return by[k]; }) };
+  }
+  if (a === 'sblocca') {
+    if (!admin) throw new Error('Serve il PIN istruttore');
+    st.removeWhere('U', function (r) { return fvNorm(r.nome) === fvNorm(nm); });
+    return { sbloccato: nm };
+  }
+  return null;
+}
+
 // p: richiesta {action, date, turno, nome, id, token, pin, ...}; st: archivio; nowStr: "yyyy-MM-dd HH:mm" ora italiana
 function fvRoute(p, st, nowStr) {
   var a = p.action, cfg = fvFixConfig(st.getConfig()), admin = false, pin = st.adminPin();
@@ -132,6 +193,8 @@ function fvRoute(p, st, nowStr) {
     admin = true;
   }
   if (a === 'login') return { admin: true };
+  var ver = fvVerifica(a, p, st, nowStr, admin);
+  if (ver) return ver;
   if (a === 'setConfig') {
     if (!admin) throw new Error('Serve il PIN istruttore');
     var oggi = nowStr.slice(0, 10), nf = {}, pf = p.fissi || {};
@@ -144,7 +207,11 @@ function fvRoute(p, st, nowStr) {
   var d = String(p.date || '');
   if (!fvIsWed(d)) throw new Error('Data non valida');
   var token = String(p.token || '');
-  if (a === 'state') return fvState(cfg, st, d, token, admin, nowStr);
+  if (a === 'state') {
+    var stt = fvState(cfg, st, d, token, admin, nowStr), nn = fvClean(p.nome);
+    if (nn) stt.io = { nome: nn, verificato: fvVerificato(st, nn, token), registrato: !!fvRegistrato(st, nn) };
+    return stt;
+  }
 
   var k = p.turno, nome = fvClean(p.nome);
   var needTurno = ['book', 'absent', 'add', 'pay', 'declare'].indexOf(a) >= 0;
@@ -167,6 +234,7 @@ function fvRoute(p, st, nowStr) {
     FV_TURNI.forEach(function (T) {
       if (T.k !== k && full.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(nome); })) throw new Error(nome + ' è già prenotato nel turno ' + T.l);
     });
+    if (!admin && !fvVerificato(st, nome, token)) throw new Error('Prima verifica il tuo nome con l’email (in alto)');
     if (!admin && !gia && cur.count >= fvPosti(cfg, k)) throw new Error('Turno pieno');
     if (isFisso) st.removeWhere('A', match);
     st.add('P', { id: fvId(), data: d, turno: k, nome: gia ? gia.nome : nome, token: admin ? '' : token, creato: nowStr });

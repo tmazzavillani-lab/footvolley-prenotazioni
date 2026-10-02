@@ -40,6 +40,8 @@
     getConfig: function () { return this.load().config || null; },
     setConfig: function (c) { var db = this.load(); db.config = c; this.save(db); },
     adminPin: function () { return '1234'; },
+    demo: true,
+    sendMail: function () { },
     list: function (k) { return (this.load()[k] || []).slice(); },
     add: function (k, o) { var db = this.load(); (db[k] = db[k] || []).push(o); this.save(db); },
     removeWhere: function (k, fn) { var db = this.load(); db[k] = (db[k] || []).filter(function (r) { return !fn(r); }); this.save(db); }
@@ -66,7 +68,7 @@
 
   function load() {
     var d = curDate;
-    return api({ action: 'state', date: d }).then(function (s) {
+    return api({ action: 'state', date: d, nome: myName() }).then(function (s) {
       if (d !== curDate) return;
       state = s;
       if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi, satispay: s.config.satispay || '', speciali: s.config.speciali || {}, postiTurno: s.config.postiTurno || {} }));
@@ -147,6 +149,16 @@
     }
     var admin = state.admin, cfg = state.config, me = myName(), now = nowRome();
     $('subline').textContent = FV_TURNI.map(function (T) { return T.l; }).join(' · ') + ' · ' + eur(cfg.prezzo) + ' a persona';
+    var io = state.io, ver = $('verifica');
+    ver.hidden = admin || !io || !me || fvNorm(io.nome) !== fvNorm(me);
+    if (!ver.hidden) {
+      ver.classList.toggle('ok', io.verificato);
+      $('verStato').textContent = io.verificato ? '✓ Nome verificato su questo telefono' : io.registrato
+        ? 'Questo nome è già verificato su un altro telefono: inserisci la stessa email per ricevere il codice.'
+        : 'Per prenotarti verifica il tuo nome, una volta sola: ti mandiamo un codice via email.';
+      $('verInviaForm').hidden = io.verificato;
+      if (io.verificato) $('verCodiceForm').hidden = true;
+    }
     $('annullata').hidden = !state.annullata;
     var pay = $('payBar');
     pay.hidden = !cfg.satispay || state.annullata;
@@ -269,6 +281,7 @@
         var b = btn('btn primary', label, function () {
           var nm = myName();
           if (!nm) { toast('Scrivi prima nome e cognome in alto', true); $('nome').focus(); return; }
+          if (state.io && fvNorm(state.io.nome) === fvNorm(nm) && !state.io.verificato) { toast('Prima verifica il tuo nome con l’email, qui in alto', true); $('verEmail').focus(); return; }
           if (nm.split(' ').filter(function (w) { return w.replace(/[^\p{L}]/gu, '').length >= 2; }).length < 2) { toast('Scrivi nome e cognome completi (es. Marco Rossi)', true); $('nome').focus(); return; }
           act({ action: 'book', turno: T.k, nome: nm }, 'Prenotato: ' + T.l + ', ' + dateLabel(curDate, { weekday: 'long', day: 'numeric', month: 'long' }));
         });
@@ -338,7 +351,38 @@
 
   // --- eventi ---
   $('nome').value = lsGet('fv-nome') || '';
-  $('nome').addEventListener('input', function () { lsSet('fv-nome', myName()); render(); });
+  var nomeT;
+  $('nome').addEventListener('input', function () { lsSet('fv-nome', myName()); render(); clearTimeout(nomeT); nomeT = setTimeout(load, 700); });
+  $('verInviaForm').onsubmit = function (e) {
+    e.preventDefault();
+    var em = $('verEmail').value.trim(); if (!em) return;
+    toast('Invio il codice…');
+    api({ action: 'verificaInvia', nome: myName(), email: em }).then(function (r) {
+      $('verCodiceForm').hidden = false; $('verCodice').focus();
+      toast('Codice inviato a ' + r.email + (r.codiceDemo ? ' (prova: ' + r.codiceDemo + ')' : '') + '. Controlla anche lo spam.');
+    }).catch(function (err) { toast(err.message, true); });
+  };
+  $('verCodiceForm').onsubmit = function (e) {
+    e.preventDefault();
+    api({ action: 'verificaConferma', nome: myName(), codice: $('verCodice').value }).then(function (r) {
+      $('verCodice').value = ''; $('verCodiceForm').hidden = true;
+      toast('Nome verificato: ciao ' + r.nome + '!'); load();
+    }).catch(function (err) { toast(err.message, true); });
+  };
+  $('atletiBtn').onclick = function () {
+    api({ action: 'atleti' }).then(function (r) {
+      var ul = $('atleti'); ul.replaceChildren();
+      if (!r.atleti.length) ul.append(el('li', 'empty', 'Nessun atleta verificato per ora.'));
+      r.atleti.forEach(function (a) {
+        var li = el('li', 'p');
+        li.append(el('span', 'n', a.nome), el('span', 'hint', a.email + (a.telefoni > 1 ? ' · ' + a.telefoni + ' telefoni' : '')));
+        li.append(btn('link', 'Sblocca', function () {
+          api({ action: 'sblocca', nome: a.nome }).then(function () { toast(a.nome + ' sbloccato'); $('atletiBtn').onclick(); }).catch(function (err) { toast(err.message, true); });
+        }));
+        ul.append(li);
+      });
+    }).catch(function (err) { toast(err.message, true); });
+  };
   $('login').onsubmit = function (e) {
     e.preventDefault();
     var pin = $('pin').value.trim(); if (!pin) return;

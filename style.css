@@ -151,10 +151,15 @@ form.add label.prova{flex-basis:100%;font-size:.85rem;color:var(--muted);display
 .linkbox p{margin:0}
 .linkurl{font-size:.8rem;overflow-wrap:anywhere;background:var(--surface);padding:6px 8px;border-radius:8px}
 
-.guida p.promemoria{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 
 .postiturno{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
 .postiturno input{width:70px;padding:6px 8px}
 .wrap{max-width:1180px}
 
 body.busy #turni button,body.busy #turni .pay{pointer-events:none;opacity:.6}
+
+.verifica{background:var(--sun-soft);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.verifica.ok{background:var(--ok-soft);color:var(--ok)}
+.verifica p{margin:0;font-size:.9rem}
+.verifica input{flex:1;min-width:0}
+.atleti{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
