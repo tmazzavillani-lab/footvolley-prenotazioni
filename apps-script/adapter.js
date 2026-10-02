@@ -63,6 +63,9 @@ var FvSheetStore = {
     if (fvProps_) fvProps_.CONFIG = s;
   },
   adminPin: function () { return fvProp_('ADMIN_PIN'); },
+  // dopo 5 PIN sbagliati l'area istruttore si blocca per 15 minuti
+  pinBloccato: function () { return Number(CacheService.getScriptCache().get('fvPinErr') || 0) >= 5; },
+  pinErrato: function () { var c = CacheService.getScriptCache(); c.put('fvPinErr', String(Number(c.get('fvPinErr') || 0) + 1), 900); },
   sendMail: function (to, subject, body) { MailApp.sendEmail(to, subject, body, { name: 'Ravenna Footvolley' }); },
   list: function (k) {
     if (!fvRows_[k]) {

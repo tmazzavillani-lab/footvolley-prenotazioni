@@ -165,3 +165,6 @@ body.busy #turni button,body.busy #turni .pay{pointer-events:none;opacity:.6}
 .atleti{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 
 #turni.attesa{opacity:.45;pointer-events:none;transition:opacity .15s}
+
+/* PIN nascosto senza essere un campo password: il browser non propone di salvarlo */
+input.pin{-webkit-text-security:disc;text-security:disc}

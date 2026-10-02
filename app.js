@@ -9,7 +9,12 @@
   if (!TOKEN) { TOKEN = Math.random().toString(36).slice(2) + Date.now().toString(36); lsSet('fv-token', TOKEN); }
   // ?atleta mostra l'app come la vede un ragazzo, senza toccare il PIN salvato
   var VISTA_ATLETA = /(^|[?&])atleta(=|&|$)/.test(location.search);
-  var PIN = VISTA_ATLETA ? null : lsGet('fv-pin');
+  // Il PIN resta solo finché la scheda è aperta (sessionStorage) e scade dopo 30 minuti di inattività
+  function ssGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+  function ssSet(k, v) { try { if (v == null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) { } }
+  lsSet('fv-pin', null); // vecchie versioni lo salvavano per sempre
+  var PIN = VISTA_ATLETA ? null : ssGet('fv-pin'), ultimaAttivita = Date.now();
+  ['click', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, function () { ultimaAttivita = Date.now(); }, true); });
   var state = null, curDate = null, busy = false, adminCfg = null; cacheSerate = {};
 
   function nowRome() {
@@ -89,7 +94,7 @@
       if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi, satispay: s.config.satispay || '', speciali: s.config.speciali || {}, postiTurno: s.config.postiTurno || {} }));
       render();
     }).catch(function (e) {
-      if (/PIN/.test(e.message) && PIN) { PIN = null; lsSet('fv-pin', null); adminCfg = null; cacheSerate = {}; return load(); }
+      if (/PIN/.test(e.message) && PIN) { PIN = null; ssSet('fv-pin', null); adminCfg = null; cacheSerate = {}; return load(); }
       toast('Non riesco a caricare i turni: ' + e.message, true);
     });
   }
@@ -406,10 +411,10 @@
     e.preventDefault();
     var pin = $('pin').value.trim(); if (!pin) return;
     PIN = pin;
-    api({ action: 'login' }).then(function () { lsSet('fv-pin', pin); $('pin').value = ''; adminCfg = null; cacheSerate = {}; return load(); })
+    api({ action: 'login' }).then(function () { ssSet('fv-pin', pin); $('pin').value = ''; adminCfg = null; cacheSerate = {}; return load(); })
       .catch(function (err) { PIN = null; toast(err.message, true); });
   };
-  $('logout').onclick = function () { PIN = null; lsSet('fv-pin', null); adminCfg = null; cacheSerate = {}; load(); };
+  $('logout').onclick = function () { PIN = null; ssSet('fv-pin', null); adminCfg = null; cacheSerate = {}; load(); };
   $('toggleDate').onclick = function () { act({ action: 'toggleDate', annullata: !state.annullata }, state.annullata ? 'Serata riattivata' : 'Serata annullata'); };
   $('prezzo').onchange = function () { var v = parseFloat(this.value); if (v >= 0) adminCfg.prezzo = v; };
   $('satispay').onchange = function () { adminCfg.satispay = this.value.trim(); };
@@ -451,5 +456,8 @@
   renderDates();
   load();
   setInterval(function () { if (!busy && document.visibilityState === 'visible') load(); }, 30000);
+  setInterval(function () {
+    if (PIN && Date.now() - ultimaAttivita > 30 * 60000) { PIN = null; ssSet('fv-pin', null); adminCfg = null; cacheSerate = {}; toast('Uscito dall’area istruttore per inattività'); load(); }
+  }, 60000);
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && !busy) load(); });
 })();

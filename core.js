@@ -189,7 +189,8 @@ function fvRoute(p, st, nowStr) {
   var a = p.action, cfg = fvFixConfig(st.getConfig()), admin = false, pin = st.adminPin();
   if (p.pin) {
     if (!pin) throw new Error('PIN istruttore non impostato nello script');
-    if (String(p.pin) !== String(pin)) throw new Error('PIN errato');
+    if (st.pinBloccato && st.pinBloccato()) throw new Error('PIN: troppi tentativi sbagliati, area istruttore bloccata per 15 minuti');
+    if (String(p.pin) !== String(pin)) { if (st.pinErrato) st.pinErrato(); throw new Error('PIN errato'); }
     admin = true;
   }
   if (a === 'login') return { admin: true };
@@ -242,7 +243,7 @@ function fvRoute(p, st, nowStr) {
     var row = st.list('P').filter(function (r) { return r.id === p.id && r.data === d; })[0];
     if (!row) throw new Error('Prenotazione non trovata');
     if (!admin) {
-      if (!token || row.token !== token) throw new Error('Puoi annullare solo le prenotazioni fatte da questo telefono');
+      if (!token || row.token !== token) throw new Error('Puoi annullare solo le prenotazioni fatte da questo dispositivo');
       if (fvStarted(d, row.turno, nowStr)) throw new Error('Il turno è già iniziato');
     }
     st.removeWhere('P', function (r) { return r.id === row.id; });
@@ -271,7 +272,7 @@ function fvRoute(p, st, nowStr) {
     if (!who) throw new Error(nome + ' non è in questo turno');
     if (who.pagato) throw new Error('Pagamento già verificato dall’istruttore');
     var suo = who.id && token && st.list('P').some(function (r) { return r.id === who.id && r.token === token; });
-    if (!admin && !suo) throw new Error('Puoi segnare il pagamento solo dal telefono con cui ti sei prenotato');
+    if (!admin && !suo) throw new Error('Puoi segnare il pagamento solo dal dispositivo con cui ti sei prenotato');
     st.removeWhere('D', match);
     if (!p.undo) {
       if (FV_METODI.indexOf(p.metodo) < 0 || (p.metodo === 'prova' && !admin)) throw new Error('Scegli come hai pagato');
