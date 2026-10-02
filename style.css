@@ -45,7 +45,7 @@ input[type=text],input[type=number],input[type=password],input[type=url]{font:in
 .btn:disabled{opacity:.55;cursor:default;border-color:var(--line)}
 .btn.primary:disabled{background:var(--line);color:var(--muted)}
 :focus-visible{outline:2px solid var(--sea);outline-offset:2px}
-.turni{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.turni{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
 .turno{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .thead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .thead h3{font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums}
@@ -91,7 +91,7 @@ ul.people{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;
 .totals b{font-family:var(--f-display);font-size:1.6rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
 .totals .paid b{color:var(--ok)}
 .totals .due b{color:var(--warn)}
-.fissi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fissi{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .fissi .col{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{display:inline-flex;align-items:center;gap:4px;background:var(--sea-soft);color:var(--ink);border-radius:999px;padding:3px 4px 3px 10px;font-size:.9rem}
@@ -152,3 +152,9 @@ form.add label.prova{flex-basis:100%;font-size:.85rem;color:var(--muted);display
 .linkurl{font-size:.8rem;overflow-wrap:anywhere;background:var(--surface);padding:6px 8px;border-radius:8px}
 
 .guida p.promemoria{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+
+.postiturno{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
+.postiturno input{width:70px;padding:6px 8px}
+.wrap{max-width:1180px}
+
+body.busy #turni button,body.busy #turni .pay{pointer-events:none;opacity:.6}

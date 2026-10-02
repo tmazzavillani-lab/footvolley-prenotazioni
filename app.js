@@ -69,7 +69,7 @@
     return api({ action: 'state', date: d }).then(function (s) {
       if (d !== curDate) return;
       state = s;
-      if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi, satispay: s.config.satispay || '', speciali: s.config.speciali || {} }));
+      if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi, satispay: s.config.satispay || '', speciali: s.config.speciali || {}, postiTurno: s.config.postiTurno || {} }));
       render();
     }).catch(function (e) {
       if (/PIN/.test(e.message) && PIN) { PIN = null; lsSet('fv-pin', null); adminCfg = null; return load(); }
@@ -79,12 +79,13 @@
 
   function act(p, okMsg, then) {
     if (busy) return;
-    busy = true; document.body.style.cursor = 'progress';
+    busy = true; document.body.style.cursor = 'progress'; document.body.classList.add('busy');
+    toast('Un attimo…');
     p.date = curDate;
     var ok = false;
     api(p).then(function (s) { state = s; render(); if (okMsg) toast(okMsg); ok = true; })
       .catch(function (e) { toast(e.message, true); load(); })
-      .then(function () { busy = false; document.body.style.cursor = ''; if (ok && then) then(); });
+      .then(function () { busy = false; document.body.style.cursor = ''; document.body.classList.remove('busy'); if (ok && then) then(); });
   }
 
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
@@ -113,7 +114,7 @@
       renderDates();
     }
     var admin = state.admin, cfg = state.config, me = myName(), now = nowRome();
-    $('subline').textContent = '18–19 · 19–20 · 20–21 · ' + eur(cfg.prezzo) + ' a persona · max ' + cfg.posti + ' per turno';
+    $('subline').textContent = FV_TURNI.map(function (T) { return T.l; }).join(' · ') + ' · ' + eur(cfg.prezzo) + ' a persona';
     $('annullata').hidden = !state.annullata;
     var pay = $('payBar');
     pay.hidden = !cfg.satispay || state.annullata;
@@ -125,7 +126,7 @@
     var myTurn = null;
     if (me) FV_TURNI.forEach(function (T) { if (state.turni[T.k].people.some(function (x) { return !x.riservato && fvNorm(x.nome) === fvNorm(me); })) myTurn = myTurn || T; });
     FV_TURNI.forEach(function (T) {
-      var t = state.turni[T.k], n = t.count, cap = cfg.posti, started = fvStarted(curDate, T.k, now);
+      var t = state.turni[T.k], n = t.count, cap = t.posti || cfg.posti, started = fvStarted(curDate, T.k, now);
       tot += n;
       var card = el('article', 'turno');
       var head = el('div', 'thead');
@@ -272,7 +273,11 @@
     box.replaceChildren();
     FV_TURNI.forEach(function (T) {
       var col = el('div', 'col'), list = adminCfg.fissi[T.k];
-      col.append(el('h3', null, T.l + ' · ' + list.length));
+      col.append(el('h3', null, T.l + ' · ' + list.length + ' fissi'));
+      var pl = el('label', 'postiturno'), pi = el('input'); pi.type = 'number'; pi.min = 1; pi.max = 30; pi.id = 'pt-' + T.k;
+      pi.value = (adminCfg.postiTurno || {})[T.k] || adminCfg.posti;
+      pi.onchange = function () { var v = parseInt(pi.value, 10); if (v > 0) { adminCfg.postiTurno = adminCfg.postiTurno || {}; adminCfg.postiTurno[T.k] = v; $('cfgNote').textContent = 'Modifiche da salvare'; $('cfgNote').className = 'note err'; } };
+      pl.append('Posti ', pi); col.append(pl);
       var chips = el('div', 'chips');
       if (!list.length) chips.append(el('span', 'empty', 'Nessun fisso'));
       list.forEach(function (n) {
@@ -294,7 +299,6 @@
     });
     if (focus && $(focus) && box.contains($(focus))) $(focus).focus();
     if (document.activeElement !== $('prezzo')) $('prezzo').value = adminCfg.prezzo;
-    if (document.activeElement !== $('posti')) $('posti').value = adminCfg.posti;
     if (document.activeElement !== $('satispay')) $('satispay').value = adminCfg.satispay || '';
     if (document.activeElement !== $('speciali')) $('speciali').value = Object.keys(adminCfg.speciali || {}).map(function (n) { return n + ' = ' + (adminCfg.speciali[n] === 0 ? 'gratis' : adminCfg.speciali[n]); }).join('\n');
   }
@@ -312,7 +316,6 @@
   $('logout').onclick = function () { PIN = null; lsSet('fv-pin', null); adminCfg = null; load(); };
   $('toggleDate').onclick = function () { act({ action: 'toggleDate', annullata: !state.annullata }, state.annullata ? 'Serata riattivata' : 'Serata annullata'); };
   $('prezzo').onchange = function () { var v = parseFloat(this.value); if (v >= 0) adminCfg.prezzo = v; };
-  $('posti').onchange = function () { var v = parseInt(this.value, 10); if (v > 0) adminCfg.posti = v; };
   $('satispay').onchange = function () { adminCfg.satispay = this.value.trim(); };
   $('speciali').onchange = function () {
     var out = {}, bad = [];
@@ -329,7 +332,7 @@
   };
   $('saveCfg').onclick = function () {
     var note = $('cfgNote');
-    api({ action: 'setConfig', prezzo: adminCfg.prezzo, posti: adminCfg.posti, fissi: adminCfg.fissi, satispay: adminCfg.satispay, speciali: adminCfg.speciali })
+    api({ action: 'setConfig', prezzo: adminCfg.prezzo, posti: adminCfg.posti, fissi: adminCfg.fissi, satispay: adminCfg.satispay, speciali: adminCfg.speciali, postiTurno: adminCfg.postiTurno })
       .then(function (r) { adminCfg = JSON.parse(JSON.stringify(r.config)); note.textContent = 'Salvato'; note.className = 'note'; return load(); })
       .catch(function (e) { note.textContent = e.message; note.className = 'note err'; });
   };

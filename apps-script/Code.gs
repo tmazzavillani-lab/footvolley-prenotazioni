@@ -1,7 +1,7 @@
 // FILE GENERATO da build-gs.sh: modifica core.js o apps-script/adapter.js, non questo.
 // Logica delle prenotazioni, condivisa tra l'app (modalità prova) e Google Apps Script.
 // Se la modifichi, rigenera apps-script/Code.gs con: sh build-gs.sh
-var FV_TURNI = [{ k: 't18', h: '18', l: '18–19' }, { k: 't19', h: '19', l: '19–20' }, { k: 't20', h: '20', l: '20–21' }];
+var FV_TURNI = [{ k: 't17', h: '17', l: '17–18', p: 4 }, { k: 't18', h: '18', l: '18–19' }, { k: 't19', h: '19', l: '19–20' }, { k: 't20', h: '20', l: '20–21' }];
 
 function fvNorm(s) { return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
 function fvClean(s) { return String(s || '').replace(/[<>]/g, '').trim().replace(/\s+/g, ' ').slice(0, 40); }
@@ -21,8 +21,11 @@ function fvFixConfig(c) {
     fissi: {},
     annullate: Array.isArray(c.annullate) ? c.annullate.filter(fvIsWed) : [],
     satispay: /^https:\/\/[^\s<>\x22\x27]+$/.test(String(c.satispay || '').trim()) ? String(c.satispay).trim().slice(0, 300) : '',
-    speciali: {}
+    speciali: {},
+    postiTurno: {}
   };
+  var pt = c.postiTurno && typeof c.postiTurno === 'object' ? c.postiTurno : {};
+  FV_TURNI.forEach(function (t) { var v = Number(pt[t.k]); if (v >= 1 && v <= 30) out.postiTurno[t.k] = Math.round(v); });
   // prezzi concordati: { 'Nome Cognome': 10 }, 0 = gratis
   var sp = c.speciali && typeof c.speciali === 'object' ? c.speciali : {};
   Object.keys(sp).slice(0, 200).forEach(function (n) { var v = Number(sp[n]), nn = fvClean(n); if (nn && sp[n] !== '' && v >= 0 && v <= 999) out.speciali[nn] = Math.round(v * 100) / 100; });
@@ -51,7 +54,13 @@ function fvFissiAl(cfg, k, d) {
 function fvPublicConfig(cfg) {
   var f = {};
   FV_TURNI.forEach(function (t) { f[t.k] = fvFissiOggi(cfg.fissi[t.k] || []); });
-  return { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay, fissi: f, speciali: cfg.speciali };
+  var pt = {};
+  FV_TURNI.forEach(function (t) { pt[t.k] = fvPosti(cfg, t.k); });
+  return { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay, fissi: f, speciali: cfg.speciali, postiTurno: pt };
+}
+function fvPosti(cfg, k) {
+  var T = fvTurno(k);
+  return (cfg.postiTurno && cfg.postiTurno[k]) || (T && T.p) || cfg.posti;
 }
 function fvPrezzo(cfg, nome) {
   var k = Object.keys(cfg.speciali).filter(function (n) { return fvNorm(n) === fvNorm(nome); })[0];
@@ -105,13 +114,13 @@ function fvState(cfg, st, d, token, admin, nowStr) {
       // i pagamenti di una persona li vedono solo lei e l'istruttore
       if (!(admin || x.mine)) { delete x.pagato; delete x.dichiarato; delete x.metodo; delete x.gratis; delete x.prezzo; }
     });
-    turni[k] = { people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length };
+    turni[k] = { posti: fvPosti(cfg, k), people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length };
   });
   var res = {
     date: d, annullata: cfg.annullate.indexOf(d) >= 0, admin: admin, turni: turni, scaduta: scaduta, oraConferma: FV_ORA_CONFERMA,
     config: { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay }
   };
-  if (admin) res.config.fissi = fvPublicConfig(cfg).fissi;
+  if (admin) { var pc = fvPublicConfig(cfg); res.config.fissi = pc.fissi; res.config.postiTurno = pc.postiTurno; }
   return res;
 }
 
@@ -128,7 +137,7 @@ function fvRoute(p, st, nowStr) {
     if (!admin) throw new Error('Serve il PIN istruttore');
     var oggi = nowStr.slice(0, 10), nf = {}, pf = p.fissi || {};
     FV_TURNI.forEach(function (t) { nf[t.k] = fvAggiornaFissi(cfg.fissi[t.k], pf[t.k], oggi); });
-    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay, speciali: p.speciali });
+    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay, speciali: p.speciali, postiTurno: p.postiTurno });
     if (p.satispay && !nc.satispay) throw new Error('Il link Satispay deve iniziare con https://');
     st.setConfig(nc);
     return { config: fvPublicConfig(nc) };
@@ -159,7 +168,7 @@ function fvRoute(p, st, nowStr) {
     FV_TURNI.forEach(function (T) {
       if (T.k !== k && full.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(nome); })) throw new Error(nome + ' è già prenotato nel turno ' + T.l);
     });
-    if (!admin && !gia && cur.count >= cfg.posti) throw new Error('Turno pieno');
+    if (!admin && !gia && cur.count >= fvPosti(cfg, k)) throw new Error('Turno pieno');
     if (isFisso) st.removeWhere('A', match);
     st.add('P', { id: fvId(), data: d, turno: k, nome: gia ? gia.nome : nome, token: admin ? '' : token, creato: nowStr });
   } else if (a === 'cancel') {
@@ -242,48 +251,61 @@ function fvOut_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], C: ['data', 'turno', 'nome', 'creato'], K: ['nome', 'token', 'creato', 'codice'], D: ['data', 'turno', 'nome', 'metodo', 'creato'] };
-var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', C: 'Conferme fissi', K: 'Telefoni fissi', D: 'Pagamenti dichiarati' };
-var fvCache_ = {};
+var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], D: ['data', 'turno', 'nome', 'metodo', 'creato'] };
+var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', D: 'Pagamenti dichiarati' };
+// Cache valida per una sola richiesta: ogni foglio e le proprietà si leggono una volta sola
+var fvProps_ = null, fvSS_ = null, fvSh_ = {}, fvRows_ = {};
+
+function fvProp_(name) {
+  if (!fvProps_) fvProps_ = PropertiesService.getScriptProperties().getProperties();
+  return fvProps_[name] || null;
+}
 
 function fvSheet_(k) {
-  var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
-  var ss = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName(FV_SHEET[k]);
+  if (fvSh_[k]) return fvSh_[k];
+  if (!fvSS_) { var id = fvProp_('SHEET_ID'); fvSS_ = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet(); }
+  var sh = fvSS_.getSheetByName(FV_SHEET[k]);
   if (!sh) {
-    sh = ss.insertSheet(FV_SHEET[k]);
+    sh = fvSS_.insertSheet(FV_SHEET[k]);
     sh.getRange('A:F').setNumberFormat('@');
     sh.appendRow(FV_HEAD[k]);
     sh.setFrozenRows(1);
-  } else if (!fvCache_[k] && sh.getLastColumn() < FV_HEAD[k].length) {
+  } else if (sh.getLastColumn() < FV_HEAD[k].length) {
     sh.getRange(1, 1, 1, FV_HEAD[k].length).setValues([FV_HEAD[k]]);
     sh.getRange('A:F').setNumberFormat('@');
   }
-  fvCache_[k] = true;
+  fvSh_[k] = sh;
   return sh;
 }
 
 var FvSheetStore = {
-  getConfig: function () {
-    var s = PropertiesService.getScriptProperties().getProperty('CONFIG');
-    return s ? JSON.parse(s) : null;
+  getConfig: function () { var s = fvProp_('CONFIG'); return s ? JSON.parse(s) : null; },
+  setConfig: function (c) {
+    var s = JSON.stringify(c);
+    PropertiesService.getScriptProperties().setProperty('CONFIG', s);
+    if (fvProps_) fvProps_.CONFIG = s;
   },
-  setConfig: function (c) { PropertiesService.getScriptProperties().setProperty('CONFIG', JSON.stringify(c)); },
-  adminPin: function () { return PropertiesService.getScriptProperties().getProperty('ADMIN_PIN'); },
+  adminPin: function () { return fvProp_('ADMIN_PIN'); },
   list: function (k) {
-    var v = fvSheet_(k).getDataRange().getDisplayValues(), h = FV_HEAD[k];
-    return v.slice(1).map(function (row) { var o = {}; h.forEach(function (c, i) { o[c] = row[i]; }); return o; });
+    if (!fvRows_[k]) {
+      var v = fvSheet_(k).getDataRange().getDisplayValues(), h = FV_HEAD[k];
+      fvRows_[k] = v.slice(1).map(function (row) { var o = {}; h.forEach(function (c, i) { o[c] = row[i]; }); return o; });
+    }
+    return fvRows_[k].slice();
   },
   add: function (k, o) {
-    fvSheet_(k).appendRow(FV_HEAD[k].map(function (c) { return String(o[c] == null ? '' : o[c]); }));
+    var row = FV_HEAD[k].map(function (c) { return String(o[c] == null ? '' : o[c]); });
+    fvSheet_(k).appendRow(row);
+    if (fvRows_[k]) { var x = {}; FV_HEAD[k].forEach(function (c, i) { x[c] = row[i]; }); fvRows_[k].push(x); }
   },
   removeWhere: function (k, fn) {
-    var sh = fvSheet_(k), rows = this.list(k);
-    for (var i = rows.length - 1; i >= 0; i--) if (fn(rows[i])) sh.deleteRow(i + 2);
+    var rows = this.list(k), sh = null;
+    for (var i = rows.length - 1; i >= 0; i--) if (fn(rows[i])) { sh = sh || fvSheet_(k); sh.deleteRow(i + 2); fvRows_[k].splice(i, 1); }
   }
 };
 
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.
 function setup() {
-  ['P', 'A', 'G', 'C', 'K', 'D'].forEach(fvSheet_);
+  ['P', 'A', 'G', 'D'].forEach(fvSheet_);
   if (!FvSheetStore.adminPin()) Logger.log('Ricorda: imposta ADMIN_PIN nelle Proprietà script.');
 }

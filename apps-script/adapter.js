@@ -28,48 +28,61 @@ function fvOut_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], C: ['data', 'turno', 'nome', 'creato'], K: ['nome', 'token', 'creato', 'codice'], D: ['data', 'turno', 'nome', 'metodo', 'creato'] };
-var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', C: 'Conferme fissi', K: 'Telefoni fissi', D: 'Pagamenti dichiarati' };
-var fvCache_ = {};
+var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], D: ['data', 'turno', 'nome', 'metodo', 'creato'] };
+var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', D: 'Pagamenti dichiarati' };
+// Cache valida per una sola richiesta: ogni foglio e le proprietà si leggono una volta sola
+var fvProps_ = null, fvSS_ = null, fvSh_ = {}, fvRows_ = {};
+
+function fvProp_(name) {
+  if (!fvProps_) fvProps_ = PropertiesService.getScriptProperties().getProperties();
+  return fvProps_[name] || null;
+}
 
 function fvSheet_(k) {
-  var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
-  var ss = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName(FV_SHEET[k]);
+  if (fvSh_[k]) return fvSh_[k];
+  if (!fvSS_) { var id = fvProp_('SHEET_ID'); fvSS_ = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet(); }
+  var sh = fvSS_.getSheetByName(FV_SHEET[k]);
   if (!sh) {
-    sh = ss.insertSheet(FV_SHEET[k]);
+    sh = fvSS_.insertSheet(FV_SHEET[k]);
     sh.getRange('A:F').setNumberFormat('@');
     sh.appendRow(FV_HEAD[k]);
     sh.setFrozenRows(1);
-  } else if (!fvCache_[k] && sh.getLastColumn() < FV_HEAD[k].length) {
+  } else if (sh.getLastColumn() < FV_HEAD[k].length) {
     sh.getRange(1, 1, 1, FV_HEAD[k].length).setValues([FV_HEAD[k]]);
     sh.getRange('A:F').setNumberFormat('@');
   }
-  fvCache_[k] = true;
+  fvSh_[k] = sh;
   return sh;
 }
 
 var FvSheetStore = {
-  getConfig: function () {
-    var s = PropertiesService.getScriptProperties().getProperty('CONFIG');
-    return s ? JSON.parse(s) : null;
+  getConfig: function () { var s = fvProp_('CONFIG'); return s ? JSON.parse(s) : null; },
+  setConfig: function (c) {
+    var s = JSON.stringify(c);
+    PropertiesService.getScriptProperties().setProperty('CONFIG', s);
+    if (fvProps_) fvProps_.CONFIG = s;
   },
-  setConfig: function (c) { PropertiesService.getScriptProperties().setProperty('CONFIG', JSON.stringify(c)); },
-  adminPin: function () { return PropertiesService.getScriptProperties().getProperty('ADMIN_PIN'); },
+  adminPin: function () { return fvProp_('ADMIN_PIN'); },
   list: function (k) {
-    var v = fvSheet_(k).getDataRange().getDisplayValues(), h = FV_HEAD[k];
-    return v.slice(1).map(function (row) { var o = {}; h.forEach(function (c, i) { o[c] = row[i]; }); return o; });
+    if (!fvRows_[k]) {
+      var v = fvSheet_(k).getDataRange().getDisplayValues(), h = FV_HEAD[k];
+      fvRows_[k] = v.slice(1).map(function (row) { var o = {}; h.forEach(function (c, i) { o[c] = row[i]; }); return o; });
+    }
+    return fvRows_[k].slice();
   },
   add: function (k, o) {
-    fvSheet_(k).appendRow(FV_HEAD[k].map(function (c) { return String(o[c] == null ? '' : o[c]); }));
+    var row = FV_HEAD[k].map(function (c) { return String(o[c] == null ? '' : o[c]); });
+    fvSheet_(k).appendRow(row);
+    if (fvRows_[k]) { var x = {}; FV_HEAD[k].forEach(function (c, i) { x[c] = row[i]; }); fvRows_[k].push(x); }
   },
   removeWhere: function (k, fn) {
-    var sh = fvSheet_(k), rows = this.list(k);
-    for (var i = rows.length - 1; i >= 0; i--) if (fn(rows[i])) sh.deleteRow(i + 2);
+    var rows = this.list(k), sh = null;
+    for (var i = rows.length - 1; i >= 0; i--) if (fn(rows[i])) { sh = sh || fvSheet_(k); sh.deleteRow(i + 2); fvRows_[k].splice(i, 1); }
   }
 };
 
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.
 function setup() {
-  ['P', 'A', 'G', 'C', 'K', 'D'].forEach(fvSheet_);
+  ['P', 'A', 'G', 'D'].forEach(fvSheet_);
   if (!FvSheetStore.adminPin()) Logger.log('Ricorda: imposta ADMIN_PIN nelle Proprietà script.');
 }

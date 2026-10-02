@@ -77,3 +77,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02 (script v8): i fissi si prenotano come tutti. Il loro nome resta "posto riservato" fino a mer 14:00; confermano con "Conferma il tuo posto" (prenotazione legata al telefono). Tolti conferme separate e collegamento telefono (fogli *Conferme fissi* e *Telefoni fissi* non più usati).
 - 2026-10-02: promemoria settimanale per i fissi (promemoria.ics e link Google Calendar, mercoledì 9:00) nella guida.
 - 2026-10-02: istruttore: "Togli conferma" sui fissi confermati (tornano posto riservato).
+- 2026-10-02 (script v9): turno 17-18 (4 posti di default), posti per turno modificabili dall'Area istruttore; script più veloce (ogni foglio letto una volta per richiesta); riscontro immediato "Un attimo…" nell'app.

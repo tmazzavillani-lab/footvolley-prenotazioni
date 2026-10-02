@@ -1,6 +1,6 @@
 // Logica delle prenotazioni, condivisa tra l'app (modalità prova) e Google Apps Script.
 // Se la modifichi, rigenera apps-script/Code.gs con: sh build-gs.sh
-var FV_TURNI = [{ k: 't18', h: '18', l: '18–19' }, { k: 't19', h: '19', l: '19–20' }, { k: 't20', h: '20', l: '20–21' }];
+var FV_TURNI = [{ k: 't17', h: '17', l: '17–18', p: 4 }, { k: 't18', h: '18', l: '18–19' }, { k: 't19', h: '19', l: '19–20' }, { k: 't20', h: '20', l: '20–21' }];
 
 function fvNorm(s) { return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
 function fvClean(s) { return String(s || '').replace(/[<>]/g, '').trim().replace(/\s+/g, ' ').slice(0, 40); }
@@ -20,8 +20,11 @@ function fvFixConfig(c) {
     fissi: {},
     annullate: Array.isArray(c.annullate) ? c.annullate.filter(fvIsWed) : [],
     satispay: /^https:\/\/[^\s<>\x22\x27]+$/.test(String(c.satispay || '').trim()) ? String(c.satispay).trim().slice(0, 300) : '',
-    speciali: {}
+    speciali: {},
+    postiTurno: {}
   };
+  var pt = c.postiTurno && typeof c.postiTurno === 'object' ? c.postiTurno : {};
+  FV_TURNI.forEach(function (t) { var v = Number(pt[t.k]); if (v >= 1 && v <= 30) out.postiTurno[t.k] = Math.round(v); });
   // prezzi concordati: { 'Nome Cognome': 10 }, 0 = gratis
   var sp = c.speciali && typeof c.speciali === 'object' ? c.speciali : {};
   Object.keys(sp).slice(0, 200).forEach(function (n) { var v = Number(sp[n]), nn = fvClean(n); if (nn && sp[n] !== '' && v >= 0 && v <= 999) out.speciali[nn] = Math.round(v * 100) / 100; });
@@ -50,7 +53,13 @@ function fvFissiAl(cfg, k, d) {
 function fvPublicConfig(cfg) {
   var f = {};
   FV_TURNI.forEach(function (t) { f[t.k] = fvFissiOggi(cfg.fissi[t.k] || []); });
-  return { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay, fissi: f, speciali: cfg.speciali };
+  var pt = {};
+  FV_TURNI.forEach(function (t) { pt[t.k] = fvPosti(cfg, t.k); });
+  return { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay, fissi: f, speciali: cfg.speciali, postiTurno: pt };
+}
+function fvPosti(cfg, k) {
+  var T = fvTurno(k);
+  return (cfg.postiTurno && cfg.postiTurno[k]) || (T && T.p) || cfg.posti;
 }
 function fvPrezzo(cfg, nome) {
   var k = Object.keys(cfg.speciali).filter(function (n) { return fvNorm(n) === fvNorm(nome); })[0];
@@ -104,13 +113,13 @@ function fvState(cfg, st, d, token, admin, nowStr) {
       // i pagamenti di una persona li vedono solo lei e l'istruttore
       if (!(admin || x.mine)) { delete x.pagato; delete x.dichiarato; delete x.metodo; delete x.gratis; delete x.prezzo; }
     });
-    turni[k] = { people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length };
+    turni[k] = { posti: fvPosti(cfg, k), people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length };
   });
   var res = {
     date: d, annullata: cfg.annullate.indexOf(d) >= 0, admin: admin, turni: turni, scaduta: scaduta, oraConferma: FV_ORA_CONFERMA,
     config: { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay }
   };
-  if (admin) res.config.fissi = fvPublicConfig(cfg).fissi;
+  if (admin) { var pc = fvPublicConfig(cfg); res.config.fissi = pc.fissi; res.config.postiTurno = pc.postiTurno; }
   return res;
 }
 
@@ -127,7 +136,7 @@ function fvRoute(p, st, nowStr) {
     if (!admin) throw new Error('Serve il PIN istruttore');
     var oggi = nowStr.slice(0, 10), nf = {}, pf = p.fissi || {};
     FV_TURNI.forEach(function (t) { nf[t.k] = fvAggiornaFissi(cfg.fissi[t.k], pf[t.k], oggi); });
-    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay, speciali: p.speciali });
+    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay, speciali: p.speciali, postiTurno: p.postiTurno });
     if (p.satispay && !nc.satispay) throw new Error('Il link Satispay deve iniziare con https://');
     st.setConfig(nc);
     return { config: fvPublicConfig(nc) };
@@ -158,7 +167,7 @@ function fvRoute(p, st, nowStr) {
     FV_TURNI.forEach(function (T) {
       if (T.k !== k && full.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(nome); })) throw new Error(nome + ' è già prenotato nel turno ' + T.l);
     });
-    if (!admin && !gia && cur.count >= cfg.posti) throw new Error('Turno pieno');
+    if (!admin && !gia && cur.count >= fvPosti(cfg, k)) throw new Error('Turno pieno');
     if (isFisso) st.removeWhere('A', match);
     st.add('P', { id: fvId(), data: d, turno: k, nome: gia ? gia.nome : nome, token: admin ? '' : token, creato: nowStr });
   } else if (a === 'cancel') {
