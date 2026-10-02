@@ -58,3 +58,4 @@ versione**, così l'URL resta lo stesso.
   SHEET_ID e ADMIN_PIN). Provati sul backend vero: prenotazione, "Ho pagato", annullo (solo dallo
   stesso telefono). Da fare: inserire i fissi e il link Satispay dall'Area istruttore, prova dal telefono.
 - 2026-10-02: tolto "Ho pagato" dei ragazzi: i pagamenti li segna solo l'istruttore (Colletta Satispay).
+- 2026-10-02: l'istruttore (con PIN) vede anche le ultime 12 serate concluse per controllare e segnare i pagamenti.

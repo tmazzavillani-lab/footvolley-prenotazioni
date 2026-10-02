@@ -17,12 +17,13 @@
   function eur(v) { return '€' + (Math.round(v * 100) / 100).toLocaleString('it-IT'); }
   function myName() { return fvClean($('nome').value); }
 
-  // Prossimi 4 mercoledì (oggi incluso fino alle 21)
-  function wednesdays() {
+  // Prossimi 4 mercoledì (oggi incluso fino alle 21), più `back` mercoledì passati
+  function wednesdays(back) {
     var now = nowRome(), today = new Date(now.slice(0, 10) + 'T12:00:00'), out = [];
     var d = new Date(today); d.setDate(d.getDate() + ((3 - d.getDay() + 7) % 7));
     if (iso(d) === now.slice(0, 10) && now.slice(11) >= '21:00') d.setDate(d.getDate() + 7);
-    for (var i = 0; i < 4; i++) { out.push(iso(d)); d.setDate(d.getDate() + 7); }
+    d.setDate(d.getDate() - 7 * (back || 0));
+    for (var i = 0; i < 4 + (back || 0); i++) { out.push(iso(d)); d.setDate(d.getDate() + 7); }
     return out;
   }
   function dateLabel(s, opts) { return new Date(s + 'T12:00:00').toLocaleDateString('it-IT', opts); }
@@ -83,19 +84,28 @@
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function btn(cls, text, fn, title) { var b = el('button', cls, text); b.type = 'button'; b.onclick = fn; if (title) b.title = title; return b; }
 
+  var datesAdmin = false;
   function renderDates() {
-    var box = $('dates'); box.replaceChildren();
-    wednesdays().forEach(function (d) {
-      var b = el('button'); b.type = 'button';
+    var box = $('dates'), next = wednesdays()[0], sel = null; box.replaceChildren();
+    datesAdmin = !!(state && state.admin);
+    // L'istruttore vede anche le ultime 12 settimane per controllare i pagamenti
+    wednesdays(datesAdmin ? 12 : 0).forEach(function (d) {
+      var b = el('button', d < next ? 'past' : ''); b.type = 'button';
       b.setAttribute('aria-pressed', d === curDate);
-      b.append(el('small', null, dateLabel(d, { weekday: 'long' })), document.createTextNode(dateLabel(d, { day: 'numeric', month: 'long' })));
+      if (d === curDate) sel = b;
+      b.append(el('small', null, d < next ? 'concluso' : dateLabel(d, { weekday: 'long' })), document.createTextNode(dateLabel(d, { day: 'numeric', month: 'long' })));
       b.onclick = function () { if (d === curDate) return; curDate = d; renderDates(); $('turni').replaceChildren(el('p', 'empty', 'Caricamento dei turni…')); load(); };
       box.append(b);
     });
+    if (sel) box.scrollLeft = Math.max(0, sel.offsetLeft - box.offsetLeft - 8);
   }
 
   function render() {
     if (!state) return;
+    if (!!state.admin !== datesAdmin) {
+      if (!state.admin && curDate < wednesdays()[0]) { curDate = wednesdays()[0]; renderDates(); load(); return; }
+      renderDates();
+    }
     var admin = state.admin, cfg = state.config, me = myName(), now = nowRome();
     $('subline').textContent = '18–19 · 19–20 · 20–21 · ' + eur(cfg.prezzo) + ' a persona · max ' + cfg.posti + ' per turno';
     $('annullata').hidden = !state.annullata;
