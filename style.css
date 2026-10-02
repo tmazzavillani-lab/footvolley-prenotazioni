@@ -150,3 +150,5 @@ form.add label.prova{flex-basis:100%;font-size:.85rem;color:var(--muted);display
 .linkbox{background:var(--sea-soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .linkbox p{margin:0}
 .linkurl{font-size:.8rem;overflow-wrap:anywhere;background:var(--surface);padding:6px 8px;border-radius:8px}
+
+.guida p.promemoria{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
