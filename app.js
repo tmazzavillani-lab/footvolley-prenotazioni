@@ -15,6 +15,7 @@
   }
   function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function eur(v) { return '€' + (Math.round(v * 100) / 100).toLocaleString('it-IT'); }
+  var METODI = { satispay: 'Satispay', contanti: 'Contanti', bonifico: 'Bonifico' };
   function myName() { return fvClean($('nome').value); }
 
   var PRIMA_SERATA = '2026-10-07'; // prima serata con le prenotazioni online: prima non si mostra nulla
@@ -116,7 +117,7 @@
     var keep = {}, foc = document.activeElement && document.activeElement.id;
     FV_TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x) keep[T.k] = x.value; });
     var box = $('turni'); box.replaceChildren();
-    var tot = 0, paid = 0;
+    var tot = 0, paid = 0, perMetodo = { satispay: 0, contanti: 0, bonifico: 0 };
     var myTurn = null;
     if (me) FV_TURNI.forEach(function (T) { if (state.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(me); })) myTurn = myTurn || T; });
     FV_TURNI.forEach(function (T) {
@@ -134,14 +135,21 @@
       t.people.forEach(function (p) {
         var isMe = p.mine || (me && fvNorm(p.nome) === fvNorm(me));
         if (isMe) inList = true;
-        if (admin && p.pagato) paid++;
+        if (admin && p.pagato) { paid++; if (perMetodo[p.metodo] != null) perMetodo[p.metodo]++; }
+        var daConf = p.fisso && !p.confermato;
         var li = el('li', 'p' + (isMe ? ' mine' : ''));
-        li.append(el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? '' : ' x'), p.fisso ? 'fisso' : 'aggiunto'));
+        li.append(el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? (daConf ? ' wait' : '') : ' x'), p.fisso ? (daConf ? 'da confermare' : 'fisso ✓') : 'aggiunto'));
         if (admin) {
-          var pb = btn('pay' + (p.pagato ? ' on' : ''), p.pagato ? '✓ Pagato' : 'Segna pagato', function () {
-            act({ action: 'pay', turno: T.k, nome: p.nome, paid: !p.pagato });
-          }, p.pagato ? 'Tocca per togliere il pagato' : 'Segna come pagato');
-          li.append(pb);
+          if (p.pagato) {
+            li.append(btn('pay on', '✓ ' + (METODI[p.metodo] || 'Pagato'), function () {
+              act({ action: 'pay', turno: T.k, nome: p.nome, paid: false });
+            }, 'Tocca per togliere il pagato'));
+          } else {
+            Object.keys(METODI).forEach(function (m) {
+              li.append(btn('pay', METODI[m], function () { act({ action: 'pay', turno: T.k, nome: p.nome, paid: true, metodo: m }); }, 'Pagato con ' + METODI[m]));
+            });
+          }
+          if (daConf) li.append(btn('link back', 'Conferma', function () { act({ action: 'confirm', turno: T.k, nome: p.nome }, p.nome + ' confermato'); }));
           li.append(btn('link', p.fisso ? 'Assente' : 'Togli', function () {
             if (p.fisso) act({ action: 'absent', turno: T.k, nome: p.nome }, p.nome + ' segnato assente');
             else act({ action: 'cancel', id: p.id }, p.nome + ' tolto dal turno');
@@ -151,22 +159,26 @@
         }
         if (!admin && !started && !state.annullata) {
           if (p.mine) li.append(btn('link', 'Annulla', function () { act({ action: 'cancel', id: p.id }, 'Prenotazione annullata'); }));
-          else if (p.fisso && isMe) li.append(btn('link', 'Non vengo', function () { act({ action: 'absent', turno: T.k, nome: p.nome }, 'Ok, segnato che questa volta non vieni'); }));
+          else if (p.fisso && isMe) {
+            if (daConf) li.append(btn('pay wait', 'Confermo', function () { act({ action: 'confirm', turno: T.k, nome: p.nome }, 'Presenza confermata, a mercoledì!'); }));
+            li.append(btn('link', 'Non vengo', function () { act({ action: 'absent', turno: T.k, nome: p.nome }, 'Ok, segnato che questa volta non vieni'); }));
+          }
         }
         ul.append(li);
       });
       for (var j = n; j < cap; j++) { var s = el('li', 'p slot'); s.append(el('span', 'n', 'Posto libero')); ul.append(s); }
       card.append(ul);
 
-      if (t.assenti.length) {
-        var ab = el('div', 'absent'); ab.append('Assenti:');
-        t.assenti.forEach(function (a) {
+      [['Assenti', t.assenti], ['Non confermati entro le ' + state.oraConferma, t.nonConfermati || []]].forEach(function (g) {
+        if (!g[1].length) return;
+        var ab = el('div', 'absent'); ab.append(g[0] + ':');
+        g[1].forEach(function (a) {
           ab.append(el('span', 'who', a));
           var mine = me && fvNorm(a) === fvNorm(me);
-          if ((admin || (mine && !started && !state.annullata))) ab.append(btn('link back', 'Rimetti', function () { act({ action: 'absent', turno: T.k, nome: a, back: true }, a + ' rimesso nel turno'); }));
+          if (admin || (mine && !started && !state.annullata && n < cap)) ab.append(btn('link back', admin ? 'Rimetti' : 'Ci sono', function () { act({ action: 'confirm', turno: T.k, nome: a }, a + ' nel turno'); }));
         });
         card.append(ab);
-      }
+      });
 
       if (admin) {
         var f = el('form', 'add'), inp = el('input'); inp.type = 'text'; inp.placeholder = 'Aggiungi un nome'; inp.id = 'add-' + T.k; inp.maxLength = 40;
@@ -207,6 +219,7 @@
       $('tPres').textContent = tot;
       $('tPrev').textContent = eur(tot * cfg.prezzo);
       $('tPaid').textContent = eur(paid * cfg.prezzo);
+      $('tMetodi').textContent = Object.keys(METODI).map(function (m) { return METODI[m] + ' ' + eur(perMetodo[m] * cfg.prezzo); }).join(' · ');
       $('tDue').textContent = eur((tot - paid) * cfg.prezzo);
       $('toggleDate').textContent = state.annullata ? 'Riattiva questa serata' : 'Annulla questa serata';
       renderFissi();
@@ -285,6 +298,15 @@
   };
 
   $('demo').hidden = !!API;
+  var IBAN = (window.FV_IBAN || '').trim();
+  if (IBAN) {
+    $('iban').textContent = IBAN;
+    $('copyIban').onclick = function () {
+      var done = function () { toast('IBAN copiato'); };
+      try { navigator.clipboard.writeText(IBAN).then(done, function () { selIban(); }); } catch (e) { selIban(); }
+    };
+  } else $('payInfo').hidden = true;
+  function selIban() { var r = document.createRange(); r.selectNodeContents($('iban')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('IBAN selezionato: copialo'); }
   curDate = wednesdays()[0];
   renderDates();
   load();

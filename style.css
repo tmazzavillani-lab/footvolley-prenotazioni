@@ -111,3 +111,9 @@ form.add input{flex:1;padding:8px 10px}
 
 .paybar{align-self:flex-start;padding:12px 18px;font-size:1rem}
 .paybar[hidden]{display:none}
+
+.tag.wait{background:var(--sun-soft);color:var(--ink)}
+.payinfo{margin:0;font-size:.92rem;display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:70ch}
+.payinfo b{font-variant-numeric:tabular-nums;letter-spacing:.02em;overflow-wrap:anywhere}
+.payinfo .hint{flex-basis:100%}
+.totals small{font-size:.72rem;color:var(--muted)}

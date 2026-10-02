@@ -28,8 +28,9 @@ function fvOut_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome'], D: ['data', 'turno', 'nome', 'creato'] };
-var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', D: 'Pagamenti dichiarati' };
+var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], C: ['data', 'turno', 'nome', 'creato'] };
+var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', C: 'Conferme fissi' };
+var fvCache_ = {};
 
 function fvSheet_(k) {
   var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
@@ -39,7 +40,11 @@ function fvSheet_(k) {
     sh.getRange('A:F').setNumberFormat('@');
     sh.appendRow(FV_HEAD[k]);
     sh.setFrozenRows(1);
+  } else if (!fvCache_[k] && sh.getLastColumn() < FV_HEAD[k].length) {
+    sh.getRange(1, 1, 1, FV_HEAD[k].length).setValues([FV_HEAD[k]]);
+    sh.getRange('A:F').setNumberFormat('@');
   }
+  fvCache_[k] = true;
   return sh;
 }
 
@@ -65,6 +70,6 @@ var FvSheetStore = {
 
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.
 function setup() {
-  ['P', 'A', 'G', 'D'].forEach(fvSheet_);
+  ['P', 'A', 'G', 'C'].forEach(fvSheet_);
   if (!FvSheetStore.adminPin()) Logger.log('Ricorda: imposta ADMIN_PIN nelle Proprietà script.');
 }

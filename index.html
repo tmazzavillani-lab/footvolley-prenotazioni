@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div class="wrap">
@@ -37,6 +37,8 @@
   <nav class="dates" id="dates" aria-label="Scegli il mercoledì"></nav>
 
   <a class="btn pay-sp paybar" id="payBar" target="_blank" rel="noopener" hidden>Paga l'allenamento con Satispay</a>
+  <p class="payinfo" id="payInfo">Non hai Satispay? Paga in contanti al campo oppure con bonifico: IBAN <b id="iban"></b> <button class="btn small" type="button" id="copyIban">Copia IBAN</button> <span class="hint">Causale: nome, cognome e data dell'allenamento.</span></p>
+  <p class="hint">I fissi trovano il posto già tenuto: toccano <b>Confermo</b> entro mercoledì alle 14:00, altrimenti il posto si libera per gli altri.</p>
   <div class="banner" id="annullata" hidden>Allenamento annullato per questa data.</div>
   <div class="toast" id="toast" role="status" hidden></div>
 
@@ -60,7 +62,7 @@
       <div class="totals">
         <div><span>Iscritti</span><b id="tPres">0</b></div>
         <div><span>Previsto</span><b id="tPrev">€0</b></div>
-        <div class="paid"><span>Incassato</span><b id="tPaid">€0</b></div>
+        <div class="paid"><span>Incassato</span><b id="tPaid">€0</b><small id="tMetodi"></small></div>
         <div class="due"><span>Da incassare</span><b id="tDue">€0</b></div>
       </div>
       <p class="hint">Nei turni qui sopra ora puoi segnare chi ha pagato, togliere o aggiungere persone senza limite di posti.</p>
@@ -77,8 +79,8 @@
     </div>
   </section>
 </div>
-<script src="config.js?v=6"></script>
-<script src="core.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="config.js?v=7"></script>
+<script src="core.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

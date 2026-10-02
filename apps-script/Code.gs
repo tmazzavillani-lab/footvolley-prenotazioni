@@ -64,28 +64,38 @@ function fvAggiornaFissi(storico, nomi, oggi) {
   return out;
 }
 
-function fvState(cfg, st, d, token, admin) {
-  var P = st.list('P').filter(function (r) { return r.data === d; });
-  var A = st.list('A').filter(function (r) { return r.data === d; });
-  var G = st.list('G').filter(function (r) { return r.data === d; });
-  var D = st.list('D').filter(function (r) { return r.data === d; });
-  var turni = {};
+var FV_METODI = ['satispay', 'contanti', 'bonifico'];
+var FV_ORA_CONFERMA = '14:00'; // i fissi confermano entro il mercoledì a quest'ora, poi il posto si libera
+
+function fvScaduta(d, nowStr) { return nowStr >= d + ' ' + FV_ORA_CONFERMA; }
+
+function fvState(cfg, st, d, token, admin, nowStr) {
+  var day = function (r) { return r.data === d; };
+  var P = st.list('P').filter(day), A = st.list('A').filter(day), G = st.list('G').filter(day), C = st.list('C').filter(day);
+  var scaduta = fvScaduta(d, nowStr), turni = {};
   FV_TURNI.forEach(function (T) {
     var k = T.k, fx = fvFissiAl(cfg, k, d);
-    var ass = A.filter(function (r) { return r.turno === k; }).map(function (r) { return r.nome; });
-    var people = fx.filter(function (n) { return !fvHas(ass, n); }).map(function (n) { return { nome: n, fisso: true }; })
-      .concat(P.filter(function (r) { return r.turno === k; }).map(function (r) {
-        return { id: r.id, nome: r.nome, fisso: false, mine: !!token && r.token === token };
-      }));
-    people.forEach(function (x) {
-      var same = function (g) { return g.turno === k && fvNorm(g.nome) === fvNorm(x.nome); };
-      x.pagato = G.some(same);
-      x.dichiarato = !x.pagato && D.some(same);
+    var inT = function (rows) { return rows.filter(function (r) { return r.turno === k; }).map(function (r) { return r.nome; }); };
+    var ass = inT(A), conf = inT(C), nonConf = [];
+    var people = [];
+    fx.forEach(function (n) {
+      if (fvHas(ass, n)) return;
+      var ok = fvHas(conf, n);
+      if (!ok && scaduta) { nonConf.push(n); return; }
+      people.push({ nome: n, fisso: true, confermato: ok });
     });
-    turni[k] = { people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), count: people.length };
+    people = people.concat(P.filter(function (r) { return r.turno === k; }).map(function (r) {
+      return { id: r.id, nome: r.nome, fisso: false, mine: !!token && r.token === token };
+    }));
+    people.forEach(function (x) {
+      var g = G.filter(function (r) { return r.turno === k && fvNorm(r.nome) === fvNorm(x.nome); })[0];
+      x.pagato = !!g;
+      if (g && admin) x.metodo = g.metodo || '';
+    });
+    turni[k] = { people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length };
   });
   var res = {
-    date: d, annullata: cfg.annullate.indexOf(d) >= 0, admin: admin, turni: turni,
+    date: d, annullata: cfg.annullate.indexOf(d) >= 0, admin: admin, turni: turni, scaduta: scaduta, oraConferma: FV_ORA_CONFERMA,
     config: { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay }
   };
   if (admin) res.config.fissi = fvPublicConfig(cfg).fissi;
@@ -113,29 +123,38 @@ function fvRoute(p, st, nowStr) {
   var d = String(p.date || '');
   if (!fvIsWed(d)) throw new Error('Data non valida');
   var token = String(p.token || '');
-  if (a === 'state') return fvState(cfg, st, d, token, admin);
+  if (a === 'state') return fvState(cfg, st, d, token, admin, nowStr);
 
   var k = p.turno, nome = fvClean(p.nome);
-  var needTurno = ['book', 'absent', 'add', 'pay', 'declare'].indexOf(a) >= 0;
+  var needTurno = ['book', 'absent', 'add', 'pay', 'confirm'].indexOf(a) >= 0;
   if (needTurno && !fvTurno(k)) throw new Error('Turno non valido');
-  var full = needTurno ? fvState(cfg, st, d, token, admin) : null, cur = full ? full.turni[k] : null;
+  var full = needTurno ? fvState(cfg, st, d, token, admin, nowStr) : null, cur = full ? full.turni[k] : null;
   var isFisso = needTurno && fvHas(fvFissiAl(cfg, k, d), nome);
   var annullata = cfg.annullate.indexOf(d) >= 0;
+  var match = function (r) { return r.data === d && r.turno === k && fvNorm(r.nome) === fvNorm(nome); };
+  var inList = function (n) { return cur.people.some(function (x) { return fvNorm(x.nome) === fvNorm(n); }); };
 
-  if (a === 'book' || a === 'add') {
-    if (a === 'add' && !admin) throw new Error('Serve il PIN istruttore');
+  if (a === 'book' || a === 'add' || a === 'confirm') {
+    if (a !== 'book' && a !== 'confirm' && !admin) throw new Error('Serve il PIN istruttore');
     if (!nome) throw new Error('Scrivi il tuo nome');
+    if (a === 'confirm' && !isFisso) throw new Error(nome + ' non è fisso in questo turno');
     if (!admin) {
       if (annullata) throw new Error('Allenamento annullato');
       if (fvStarted(d, k, nowStr)) throw new Error('Il turno è già iniziato');
     }
-    if (cur.people.some(function (x) { return fvNorm(x.nome) === fvNorm(nome); })) throw new Error(nome + ' è già nella lista');
+    var gia = cur.people.filter(function (x) { return fvNorm(x.nome) === fvNorm(nome); })[0];
+    if (gia && !(gia.fisso && !gia.confermato)) throw new Error(nome + ' è già nella lista');
     FV_TURNI.forEach(function (T) {
       if (T.k !== k && full.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(nome); })) throw new Error(nome + ' è già prenotato nel turno ' + T.l);
     });
-    if (!admin && cur.count >= cfg.posti) throw new Error('Turno pieno');
-    if (isFisso) st.removeWhere('A', function (r) { return r.data === d && r.turno === k && fvNorm(r.nome) === fvNorm(nome); });
-    else st.add('P', { id: fvId(), data: d, turno: k, nome: nome, token: admin ? '' : token, creato: nowStr });
+    if (!admin && !gia && cur.count >= cfg.posti) throw new Error('Turno pieno');
+    if (isFisso) {
+      st.removeWhere('A', match);
+      st.removeWhere('C', match);
+      st.add('C', { data: d, turno: k, nome: nome, creato: nowStr });
+    } else {
+      st.add('P', { id: fvId(), data: d, turno: k, nome: nome, token: admin ? '' : token, creato: nowStr });
+    }
   } else if (a === 'cancel') {
     var row = st.list('P').filter(function (r) { return r.id === p.id && r.data === d; })[0];
     if (!row) throw new Error('Prenotazione non trovata');
@@ -144,35 +163,19 @@ function fvRoute(p, st, nowStr) {
       if (fvStarted(d, row.turno, nowStr)) throw new Error('Il turno è già iniziato');
     }
     st.removeWhere('P', function (r) { return r.id === row.id; });
-    var mr = function (r) { return r.data === d && r.turno === row.turno && fvNorm(r.nome) === fvNorm(row.nome); };
-    st.removeWhere('G', mr);
-    st.removeWhere('D', mr);
+    st.removeWhere('G', function (r) { return r.data === d && r.turno === row.turno && fvNorm(r.nome) === fvNorm(row.nome); });
   } else if (a === 'absent') {
     if (!isFisso) throw new Error(nome + ' non è fisso in questo turno');
     if (!admin && fvStarted(d, k, nowStr)) throw new Error('Il turno è già iniziato');
-    var match = function (r) { return r.data === d && r.turno === k && fvNorm(r.nome) === fvNorm(nome); };
-    if (p.back) {
-      if (!admin && cur.count >= cfg.posti) throw new Error('Turno pieno');
-      st.removeWhere('A', match);
-    } else {
-      st.removeWhere('A', match);
-      st.add('A', { data: d, turno: k, nome: nome });
-      st.removeWhere('G', match);
-      st.removeWhere('D', match);
-    }
+    st.removeWhere('A', match);
+    st.removeWhere('C', match);
+    st.add('A', { data: d, turno: k, nome: nome });
+    st.removeWhere('G', match);
   } else if (a === 'pay') {
     if (!admin) throw new Error('Serve il PIN istruttore');
-    var m2 = function (r) { return r.data === d && r.turno === k && fvNorm(r.nome) === fvNorm(nome); };
-    st.removeWhere('G', m2);
-    st.removeWhere('D', m2);
-    if (p.paid) st.add('G', { data: d, turno: k, nome: nome });
-  } else if (a === 'declare') {
-    var who = cur.people.filter(function (x) { return fvNorm(x.nome) === fvNorm(nome); })[0];
-    if (!who) throw new Error(nome + ' non è in questo turno');
-    if (who.pagato) throw new Error('Pagamento già confermato');
-    var m3 = function (r) { return r.data === d && r.turno === k && fvNorm(r.nome) === fvNorm(nome); };
-    st.removeWhere('D', m3);
-    if (!p.undo) st.add('D', { data: d, turno: k, nome: who.nome, creato: nowStr });
+    if (!inList(nome)) throw new Error(nome + ' non è in questo turno');
+    st.removeWhere('G', match);
+    if (p.paid) st.add('G', { data: d, turno: k, nome: nome, metodo: FV_METODI.indexOf(p.metodo) >= 0 ? p.metodo : '' });
   } else if (a === 'toggleDate') {
     if (!admin) throw new Error('Serve il PIN istruttore');
     cfg.annullate = cfg.annullate.filter(function (x) { return x !== d; });
@@ -181,7 +184,7 @@ function fvRoute(p, st, nowStr) {
   } else {
     throw new Error('Azione sconosciuta');
   }
-  return fvState(fvFixConfig(st.getConfig()), st, d, token, admin);
+  return fvState(fvFixConfig(st.getConfig()), st, d, token, admin, nowStr);
 }
 
 // --- Collegamento a Google Sheets (web app) ---
@@ -214,8 +217,9 @@ function fvOut_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome'], D: ['data', 'turno', 'nome', 'creato'] };
-var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', D: 'Pagamenti dichiarati' };
+var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], C: ['data', 'turno', 'nome', 'creato'] };
+var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', C: 'Conferme fissi' };
+var fvCache_ = {};
 
 function fvSheet_(k) {
   var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
@@ -225,7 +229,11 @@ function fvSheet_(k) {
     sh.getRange('A:F').setNumberFormat('@');
     sh.appendRow(FV_HEAD[k]);
     sh.setFrozenRows(1);
+  } else if (!fvCache_[k] && sh.getLastColumn() < FV_HEAD[k].length) {
+    sh.getRange(1, 1, 1, FV_HEAD[k].length).setValues([FV_HEAD[k]]);
+    sh.getRange('A:F').setNumberFormat('@');
   }
+  fvCache_[k] = true;
   return sh;
 }
 
@@ -251,6 +259,6 @@ var FvSheetStore = {
 
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.
 function setup() {
-  ['P', 'A', 'G', 'D'].forEach(fvSheet_);
+  ['P', 'A', 'G', 'C'].forEach(fvSheet_);
   if (!FvSheetStore.adminPin()) Logger.log('Ricorda: imposta ADMIN_PIN nelle Proprietà script.');
 }
