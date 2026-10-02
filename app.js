@@ -8,7 +8,7 @@
   var TOKEN = lsGet('fv-token');
   if (!TOKEN) { TOKEN = Math.random().toString(36).slice(2) + Date.now().toString(36); lsSet('fv-token', TOKEN); }
   // ?atleta mostra l'app come la vede un ragazzo, senza toccare il PIN salvato
-  var VISTA_ATLETA = /(^|[?&])atleta/.test(location.search);
+  var VISTA_ATLETA = /(^|[?&])atleta(=|&|$)/.test(location.search);
   var PIN = VISTA_ATLETA ? null : lsGet('fv-pin');
   var state = null, curDate = null, busy = false, adminCfg = null;
 
