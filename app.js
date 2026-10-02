@@ -213,7 +213,6 @@
     if (foc && /^add-/.test(foc) && $(foc)) $(foc).focus();
 
     $('logout').hidden = !admin;
-    $('share').hidden = !admin;
     $('login').hidden = admin;
     $('adminPanel').hidden = !admin;
     if (admin) {
@@ -259,26 +258,9 @@
     if (document.activeElement !== $('satispay')) $('satispay').value = adminCfg.satispay || '';
   }
 
-  function shareText() {
-    var url = location.href.split('#')[0].split('?')[0];
-    var m = '*RAVENNA FOOTVOLLEY*\nT&G Academy a.s.d. – affiliata CSEN\n\nAllenamento di ' + dateLabel(curDate, { weekday: 'long', day: 'numeric', month: 'long' }) + '\n';
-    if (state) {
-      if (state.annullata) m += '\n*ALLENAMENTO ANNULLATO*\n';
-      FV_TURNI.forEach(function (T) {
-        var t = state.turni[T.k];
-        m += '\n*' + T.h + ':00 – ' + (+T.h + 1) + ':00*  (' + t.count + '/' + state.config.posti + ')\n';
-        t.people.forEach(function (p, i) { m += (i + 1) + '. ' + p.nome + '\n'; });
-        var free = state.config.posti - t.count;
-        if (free > 0) m += 'Posti liberi: ' + free + '\n';
-      });
-    }
-    return m + '\nPrenota qui: ' + url;
-  }
-
   // --- eventi ---
   $('nome').value = lsGet('fv-nome') || '';
   $('nome').addEventListener('input', function () { lsSet('fv-nome', myName()); render(); });
-  $('share').onclick = function () { window.open('https://wa.me/?text=' + encodeURIComponent(shareText()), '_blank', 'noopener'); };
   $('login').onsubmit = function (e) {
     e.preventDefault();
     var pin = $('pin').value.trim(); if (!pin) return;
