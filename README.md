@@ -71,3 +71,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: tolto il pulsante di condivisione WhatsApp.
 - 2026-10-02: pallino pagamento accanto a ogni nome (verde pagato, rosso da pagare); vista atleta con ?atleta (pulsante "Vedi come atleta").
 - 2026-10-02: sezione "Come funziona" (fissi / non fissi / pagamento), aperta alla prima visita.
+- 2026-10-02 (script v5): i ragazzi segnano "Ho pagato con" (Satispay/Contanti/Bonifico) -> giallo; l'istruttore preme Verifica -> verde. Metodo "Prova gratuita" solo istruttore (escluso dagli incassi), anche come spunta quando aggiunge un nome.

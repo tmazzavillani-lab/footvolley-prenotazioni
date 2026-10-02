@@ -132,3 +132,10 @@ a.btn{text-decoration:none;display:inline-block}
 .guida p{margin:0;font-size:.92rem;color:var(--muted);max-width:60ch}
 .guida p b{color:var(--ink)}
 @media (max-width:820px){.guida-col{grid-template-columns:minmax(0,1fr)}}
+
+.dot.wait{background:var(--sun);opacity:1}
+.paid.wait{background:var(--sun-soft);color:var(--ink)}
+.payask{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:.8rem;color:var(--muted);flex-basis:100%}
+
+form.add{flex-wrap:wrap}
+form.add label.prova{flex-basis:100%;font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:6px}

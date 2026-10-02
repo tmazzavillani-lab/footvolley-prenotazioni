@@ -18,6 +18,7 @@
   function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function eur(v) { return '€' + (Math.round(v * 100) / 100).toLocaleString('it-IT'); }
   var METODI = { satispay: 'Satispay', contanti: 'Contanti', bonifico: 'Bonifico' };
+  var METODI_ADMIN = { satispay: 'Satispay', contanti: 'Contanti', bonifico: 'Bonifico', prova: 'Prova gratuita' };
   function myName() { return fvClean($('nome').value); }
 
   var PRIMA_SERATA = '2026-10-07'; // prima serata con le prenotazioni online: prima non si mostra nulla
@@ -76,13 +77,14 @@
     });
   }
 
-  function act(p, okMsg) {
+  function act(p, okMsg, then) {
     if (busy) return;
     busy = true; document.body.style.cursor = 'progress';
     p.date = curDate;
-    api(p).then(function (s) { state = s; render(); if (okMsg) toast(okMsg); })
+    var ok = false;
+    api(p).then(function (s) { state = s; render(); if (okMsg) toast(okMsg); ok = true; })
       .catch(function (e) { toast(e.message, true); load(); })
-      .then(function () { busy = false; document.body.style.cursor = ''; });
+      .then(function () { busy = false; document.body.style.cursor = ''; if (ok && then) then(); });
   }
 
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
@@ -119,7 +121,7 @@
     var keep = {}, foc = document.activeElement && document.activeElement.id;
     FV_TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x) keep[T.k] = x.value; });
     var box = $('turni'); box.replaceChildren();
-    var tot = 0, paid = 0, perMetodo = { satispay: 0, contanti: 0, bonifico: 0 };
+    var tot = 0, paid = 0, prove = 0, perMetodo = { satispay: 0, contanti: 0, bonifico: 0 };
     var myTurn = null;
     if (me) FV_TURNI.forEach(function (T) { if (state.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(me); })) myTurn = myTurn || T; });
     FV_TURNI.forEach(function (T) {
@@ -137,21 +139,24 @@
       t.people.forEach(function (p) {
         var isMe = p.mine || (me && fvNorm(p.nome) === fvNorm(me));
         if (isMe) inList = true;
-        if (admin && p.pagato) { paid++; if (perMetodo[p.metodo] != null) perMetodo[p.metodo]++; }
+        if (admin && p.pagato) { if (p.metodo === 'prova') prove++; else { paid++; if (perMetodo[p.metodo] != null) perMetodo[p.metodo]++; } }
         var daConf = p.fisso && !p.confermato;
         var li = el('li', 'p' + (isMe ? ' mine' : ''));
-        var dot = el('span', 'dot' + (p.pagato ? ' ok' : ''));
-        dot.title = p.pagato ? 'Pagato' : 'Da pagare';
+        var dot = el('span', 'dot' + (p.pagato ? ' ok' : p.dichiarato ? ' wait' : ''));
+        dot.title = p.pagato ? 'Pagato' : p.dichiarato ? 'Pagamento da verificare' : 'Da pagare';
         dot.setAttribute('aria-label', dot.title);
         li.append(dot, el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? (daConf ? ' wait' : '') : ' x'), p.fisso ? (daConf ? 'da confermare' : 'fisso ✓') : 'aggiunto'));
         if (admin) {
           if (p.pagato) {
-            li.append(btn('pay on', '✓ ' + (METODI[p.metodo] || 'Pagato'), function () {
+            li.append(btn('pay on', '✓ ' + (METODI_ADMIN[p.metodo] || 'Pagato'), function () {
               act({ action: 'pay', turno: T.k, nome: p.nome, paid: false });
             }, 'Tocca per togliere il pagato'));
+          } else if (p.dichiarato) {
+            li.append(el('span', 'paid wait', 'Dice: ' + (METODI[p.metodo] || '?')));
+            li.append(btn('pay wait', 'Verifica', function () { act({ action: 'pay', turno: T.k, nome: p.nome, paid: true }, 'Pagamento di ' + p.nome + ' verificato'); }, 'Hai controllato: segna come pagato'));
           } else {
-            Object.keys(METODI).forEach(function (m) {
-              li.append(btn('pay', METODI[m], function () { act({ action: 'pay', turno: T.k, nome: p.nome, paid: true, metodo: m }); }, 'Pagato con ' + METODI[m]));
+            Object.keys(METODI_ADMIN).forEach(function (m) {
+              li.append(btn('pay', METODI_ADMIN[m], function () { act({ action: 'pay', turno: T.k, nome: p.nome, paid: true, metodo: m }); }, m === 'prova' ? 'Prova gratuita: non paga' : 'Pagato con ' + METODI_ADMIN[m]));
             });
           }
           if (daConf) li.append(btn('link back', 'Conferma', function () { act({ action: 'confirm', turno: T.k, nome: p.nome }, p.nome + ' confermato'); }));
@@ -160,7 +165,18 @@
             else act({ action: 'cancel', id: p.id }, p.nome + ' tolto dal turno');
           }));
         } else {
-          li.append(el('span', 'paid' + (p.pagato ? ' ok' : ' no'), p.pagato ? 'Pagato' : 'Da pagare'));
+          var mio = p.mine || (p.fisso && isMe && p.telefono !== 'altro');
+          if (p.pagato) li.append(el('span', 'paid ok', p.metodo === 'prova' ? 'Prova gratuita' : 'Pagato'));
+          else if (p.dichiarato) {
+            li.append(el('span', 'paid wait', (METODI[p.metodo] || 'Pagato') + ' · da verificare'));
+            if (mio) li.append(btn('link back', 'Correggi', function () { act({ action: 'declare', turno: T.k, nome: p.nome, undo: true }, 'Ok, puoi scegliere di nuovo il metodo'); }, 'Hai sbagliato metodo? Toglilo e riscegli'));
+          } else if (mio && !state.annullata) {
+            var ask = el('span', 'payask'); ask.append(el('span', null, 'Ho pagato con:'));
+            Object.keys(METODI).forEach(function (m) {
+              ask.append(btn('pay', METODI[m], function () { act({ action: 'declare', turno: T.k, nome: p.nome, metodo: m }, 'Grazie! L’istruttore verificherà il pagamento'); }));
+            });
+            li.append(ask);
+          } else li.append(el('span', 'paid no', 'Da pagare'));
         }
         if (!admin && !started && !state.annullata) {
           if (p.mine) li.append(btn('link', 'Annulla', function () { act({ action: 'cancel', id: p.id }, 'Prenotazione annullata'); }));
@@ -188,8 +204,13 @@
       if (admin) {
         var f = el('form', 'add'), inp = el('input'); inp.type = 'text'; inp.placeholder = 'Aggiungi un nome'; inp.id = 'add-' + T.k; inp.maxLength = 40;
         var sb = el('button', 'btn', 'Aggiungi'); sb.type = 'submit';
-        f.append(inp, sb);
-        f.onsubmit = function (e) { e.preventDefault(); var v = fvClean(inp.value); if (v) act({ action: 'add', turno: T.k, nome: v }, v + ' aggiunto'); };
+        var pl = el('label', 'prova'), pc = el('input'); pc.type = 'checkbox'; pc.id = 'prova-' + T.k; pl.append(pc, ' prova gratuita');
+        f.append(inp, sb, pl);
+        f.onsubmit = function (e) {
+          e.preventDefault(); var v = fvClean(inp.value); if (!v) return;
+          if (!pc.checked) { act({ action: 'add', turno: T.k, nome: v }, v + ' aggiunto'); return; }
+          act({ action: 'add', turno: T.k, nome: v }, v + ' aggiunto in prova gratuita', function () { act({ action: 'pay', turno: T.k, nome: v, paid: true, metodo: 'prova' }); });
+        };
         card.append(f);
       } else {
         var label = 'Prenota ' + T.l, dis = false;
@@ -221,11 +242,11 @@
     $('login').hidden = admin;
     $('adminPanel').hidden = !admin;
     if (admin) {
-      $('tPres').textContent = tot;
-      $('tPrev').textContent = eur(tot * cfg.prezzo);
+      $('tPres').textContent = tot + (prove ? ' (' + prove + ' in prova)' : '');
+      $('tPrev').textContent = eur((tot - prove) * cfg.prezzo);
       $('tPaid').textContent = eur(paid * cfg.prezzo);
       $('tMetodi').textContent = Object.keys(METODI).map(function (m) { return METODI[m] + ' ' + eur(perMetodo[m] * cfg.prezzo); }).join(' · ');
-      $('tDue').textContent = eur((tot - paid) * cfg.prezzo);
+      $('tDue').textContent = eur((tot - prove - paid) * cfg.prezzo);
       $('toggleDate').textContent = state.annullata ? 'Riattiva questa serata' : 'Annulla questa serata';
       renderFissi();
     }
