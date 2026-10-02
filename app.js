@@ -450,10 +450,16 @@
     $('adminBox').hidden = VISTA_ATLETA;
     if (!VISTA_ATLETA) { $('adminBox').scrollIntoView({ behavior: 'smooth' }); setTimeout(function () { $('pin').focus(); }, 400); }
   }
+  function chiudiArea() {
+    areaVisibile = false; ssSet('fv-area', null);
+    if (PIN) { PIN = null; ssSet('fv-pin', null); adminCfg = null; cacheSerate = {}; load(); }
+    $('adminBox').hidden = true;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
   var tocchiLogo = 0, tocchiT;
   $('logo').addEventListener('click', function () {
     tocchiLogo++; clearTimeout(tocchiT); tocchiT = setTimeout(function () { tocchiLogo = 0; }, 2000);
-    if (tocchiLogo >= 5) { tocchiLogo = 0; apriArea(); }
+    if (tocchiLogo >= 5) { tocchiLogo = 0; if ($('adminBox').hidden) apriArea(); else chiudiArea(); }
   });
   if (location.hash === '#tg-staff') { apriArea(); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { } }
   var IBAN = (window.FV_IBAN || '').trim();

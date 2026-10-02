@@ -4,6 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Ravenna Footvolley · Prenotazioni</title>
+<script>
+  // Se il browser (anche quello di WhatsApp) ha in memoria una pagina vecchia, ricarica quella nuova
+  window.FV_VERSIONE = 34;
+  (function () {
+    try {
+      fetch('versione.txt?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (v) {
+        v = parseInt(v, 10);
+        var q = location.search.replace(/[?&]_v=\d+/, '').replace(/^&/, '?'), gia = (location.search.match(/[?&]_v=(\d+)/) || [])[1];
+        if (v > window.FV_VERSIONE && String(v) !== gia) location.replace(location.pathname + (q ? q + '&' : '?') + '_v=' + v + location.hash);
+      }).catch(function () { });
+    } catch (e) { }
+  })();
+</script>
 <meta name="description" content="Prenota il tuo turno di allenamento del mercoledì sera.">
 <meta property="og:title" content="Ravenna Footvolley · Prenotazioni">
 <meta property="og:description" content="Allenamenti del mercoledì: 18–19, 19–20, 20–21. Prenota il tuo turno.">
@@ -13,7 +26,7 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=33">
+<link rel="stylesheet" href="style.css?v=34">
 </head>
 <body>
 <div class="wrap">
@@ -114,8 +127,8 @@
     </div>
   </section>
 </div>
-<script src="config.js?v=33"></script>
-<script src="core.js?v=33"></script>
-<script src="app.js?v=33"></script>
+<script src="config.js?v=34"></script>
+<script src="core.js?v=34"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>
