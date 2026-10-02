@@ -31,7 +31,8 @@ function fvFixConfig(c) {
 function fvState(cfg, st, d, token, admin) {
   var P = st.list('P').filter(function (r) { return r.data === d; });
   var A = st.list('A').filter(function (r) { return r.data === d; });
-  var G = admin ? st.list('G').filter(function (r) { return r.data === d; }) : [];
+  var G = st.list('G').filter(function (r) { return r.data === d; });
+  var D = st.list('D').filter(function (r) { return r.data === d; });
   var turni = {};
   FV_TURNI.forEach(function (T) {
     var k = T.k, fx = cfg.fissi[k] || [];
@@ -40,8 +41,10 @@ function fvState(cfg, st, d, token, admin) {
       .concat(P.filter(function (r) { return r.turno === k; }).map(function (r) {
         return { id: r.id, nome: r.nome, fisso: false, mine: !!token && r.token === token };
       }));
-    if (admin) people.forEach(function (x) {
-      x.pagato = G.some(function (g) { return g.turno === k && fvNorm(g.nome) === fvNorm(x.nome); });
+    people.forEach(function (x) {
+      var same = function (g) { return g.turno === k && fvNorm(g.nome) === fvNorm(x.nome); };
+      x.pagato = G.some(same);
+      x.dichiarato = !x.pagato && D.some(same);
     });
     turni[k] = { people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), count: people.length };
   });
@@ -75,7 +78,7 @@ function fvRoute(p, st, nowStr) {
   if (a === 'state') return fvState(cfg, st, d, token, admin);
 
   var k = p.turno, nome = fvClean(p.nome);
-  var needTurno = ['book', 'absent', 'add', 'pay'].indexOf(a) >= 0;
+  var needTurno = ['book', 'absent', 'add', 'pay', 'declare'].indexOf(a) >= 0;
   if (needTurno && !fvTurno(k)) throw new Error('Turno non valido');
   var cur = needTurno ? fvState(cfg, st, d, token, admin).turni[k] : null;
   var isFisso = needTurno && fvHas(cfg.fissi[k], nome);
@@ -100,7 +103,9 @@ function fvRoute(p, st, nowStr) {
       if (fvStarted(d, row.turno, nowStr)) throw new Error('Il turno è già iniziato');
     }
     st.removeWhere('P', function (r) { return r.id === row.id; });
-    st.removeWhere('G', function (r) { return r.data === d && r.turno === row.turno && fvNorm(r.nome) === fvNorm(row.nome); });
+    var mr = function (r) { return r.data === d && r.turno === row.turno && fvNorm(r.nome) === fvNorm(row.nome); };
+    st.removeWhere('G', mr);
+    st.removeWhere('D', mr);
   } else if (a === 'absent') {
     if (!isFisso) throw new Error(nome + ' non è fisso in questo turno');
     if (!admin && fvStarted(d, k, nowStr)) throw new Error('Il turno è già iniziato');
@@ -112,12 +117,21 @@ function fvRoute(p, st, nowStr) {
       st.removeWhere('A', match);
       st.add('A', { data: d, turno: k, nome: nome });
       st.removeWhere('G', match);
+      st.removeWhere('D', match);
     }
   } else if (a === 'pay') {
     if (!admin) throw new Error('Serve il PIN istruttore');
     var m2 = function (r) { return r.data === d && r.turno === k && fvNorm(r.nome) === fvNorm(nome); };
     st.removeWhere('G', m2);
+    st.removeWhere('D', m2);
     if (p.paid) st.add('G', { data: d, turno: k, nome: nome });
+  } else if (a === 'declare') {
+    var who = cur.people.filter(function (x) { return fvNorm(x.nome) === fvNorm(nome); })[0];
+    if (!who) throw new Error(nome + ' non è in questo turno');
+    if (who.pagato) throw new Error('Pagamento già confermato');
+    var m3 = function (r) { return r.data === d && r.turno === k && fvNorm(r.nome) === fvNorm(nome); };
+    st.removeWhere('D', m3);
+    if (!p.undo) st.add('D', { data: d, turno: k, nome: who.nome, creato: nowStr });
   } else if (a === 'toggleDate') {
     if (!admin) throw new Error('Serve il PIN istruttore');
     cfg.annullate = cfg.annullate.filter(function (x) { return x !== d; });
@@ -158,8 +172,8 @@ function fvOut_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome'] };
-var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti' };
+var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome'], D: ['data', 'turno', 'nome', 'creato'] };
+var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', D: 'Pagamenti dichiarati' };
 
 function fvSheet_(k) {
   var ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName(FV_SHEET[k]);
@@ -194,6 +208,6 @@ var FvSheetStore = {
 
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.
 function setup() {
-  ['P', 'A', 'G'].forEach(fvSheet_);
+  ['P', 'A', 'G', 'D'].forEach(fvSheet_);
   if (!FvSheetStore.adminPin()) Logger.log('Ricorda: imposta ADMIN_PIN nelle Proprietà script.');
 }

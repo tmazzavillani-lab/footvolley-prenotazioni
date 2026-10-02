@@ -8,7 +8,9 @@ T&G Academy a.s.d. – affiliata CSEN.
 - **Istruttore** (in fondo alla pagina, con PIN): gestisce i fissi, segna i pagamenti, aggiunge o
   toglie persone, annulla una serata, vede incassato e da incassare.
 - **Satispay**: se in Area istruttore inserisci il tuo link di pagamento Satispay, chi è in lista vede
-  il pulsante "Paga €16 con Satispay". Il pagamento non si spunta da solo: lo segni tu come pagato.
+  il pulsante "Paga €16 con Satispay".
+- **Pagamenti**: accanto a ogni nome c'è lo stato. Il ragazzo tocca "Ho pagato" (giallo: da verificare),
+  tu controlli su Satispay e premi "Conferma" (verde: ✓ Pagato).
 - Le prenotazioni finiscono in un **Google Sheet** tuo (fogli *Prenotazioni*, *Assenze*, *Pagamenti*).
 
 Finché `config.js` non contiene l'URL dello script, l'app gira in **modalità prova** (dati solo sul
@@ -49,4 +51,6 @@ versione**, così l'URL resta lo stesso.
 
 - 2026-10-01: prima versione. Testata la logica (posti, doppioni, annullo, PIN, turni passati) e
   l'app in modalità prova. Pubblicata su https://tmazzavillani-lab.github.io/footvolley-prenotazioni/
-- 2026-10-02: pulsante di pagamento Satispay (link configurabile dall'Area istruttore). Da fare: collegare il Google Sheet (passi sopra) e provare dal telefono.
+- 2026-10-02: pulsante di pagamento Satispay (link configurabile dall'Area istruttore). 
+- 2026-10-02: stato pagamento accanto a ogni nome ("Ho pagato" del ragazzo + conferma istruttore,
+  foglio *Pagamenti dichiarati*). Da fare: collegare il Google Sheet (passi sopra) e provare dal telefono.

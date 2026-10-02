@@ -62,6 +62,10 @@ ul.people{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;
 .tag.x{background:var(--sun-soft);color:var(--ink)}
 .pay{border:1px solid var(--line);background:none;color:var(--muted);font-weight:600;font-size:.8rem;padding:5px 9px;border-radius:8px;cursor:pointer;white-space:nowrap}
 .pay.on{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.pay.wait{background:var(--sun-soft);border-color:var(--sun);color:var(--ink)}
+.paid{font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.paid.ok{background:var(--ok-soft);color:var(--ok)}
+.paid.wait{background:var(--sun-soft);color:var(--ink)}
 .link{border:0;background:none;color:var(--warn);font:600 .85rem var(--f-body);padding:5px 6px;cursor:pointer;border-radius:8px}
 .link.back{color:var(--sea)}
 .absent{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.85rem;color:var(--muted)}

@@ -121,16 +121,23 @@
         if (admin && p.pagato) paid++;
         var li = el('li', 'p' + (isMe ? ' mine' : ''));
         li.append(el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? '' : ' x'), p.fisso ? 'fisso' : 'aggiunto'));
+        if (p.pagato) li.append(el('span', 'paid ok', '✓ Pagato'));
+        else if (p.dichiarato) li.append(el('span', 'paid wait', 'Pagato · da verificare'));
         if (admin) {
-          var pb = btn('pay' + (p.pagato ? ' on' : ''), p.pagato ? 'Pagato' : eur(cfg.prezzo), function () {
+          var pb = btn('pay' + (p.pagato ? ' on' : p.dichiarato ? ' wait' : ''), p.pagato ? 'Annulla pagato' : p.dichiarato ? 'Conferma' : 'Segna pagato', function () {
             act({ action: 'pay', turno: T.k, nome: p.nome, paid: !p.pagato });
-          }, p.pagato ? 'Segna come non pagato' : 'Segna come pagato');
+          });
           li.append(pb);
           li.append(btn('link', p.fisso ? 'Assente' : 'Togli', function () {
             if (p.fisso) act({ action: 'absent', turno: T.k, nome: p.nome }, p.nome + ' segnato assente');
             else act({ action: 'cancel', id: p.id }, p.nome + ' tolto dal turno');
           }));
-        } else if (!started && !state.annullata) {
+        } else {
+          if (isMe && !p.pagato && !state.annullata) li.append(btn('pay' + (p.dichiarato ? '' : ' wait'), p.dichiarato ? 'Non ancora' : 'Ho pagato', function () {
+            act({ action: 'declare', turno: T.k, nome: p.nome, undo: p.dichiarato }, p.dichiarato ? 'Ok, tolto' : 'Grazie! Il pagamento verrà confermato dall’istruttore');
+          }));
+        }
+        if (!admin && !started && !state.annullata) {
           if (p.mine) li.append(btn('link', 'Annulla', function () { act({ action: 'cancel', id: p.id }, 'Prenotazione annullata'); }));
           else if (p.fisso && isMe) li.append(btn('link', 'Non vengo', function () { act({ action: 'absent', turno: T.k, nome: p.nome }, 'Ok, segnato che questa volta non vieni'); }));
         }
