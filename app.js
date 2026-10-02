@@ -66,21 +66,26 @@
     clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 4000);
   }
 
-  // Copia locale delle serate già caricate: cambiando mercoledì si vede subito, poi si aggiorna
-  var cacheSerate = {};
+  // Copia locale delle serate: all'apertura si caricano tutte insieme, cambiando mercoledì si vedono subito
+  var cacheSerate = {}, inCorso = {};
+  function chiedi(d) {
+    if (!inCorso[d]) {
+      inCorso[d] = api({ action: 'state', date: d, nome: myName() })
+        .then(function (s) { cacheSerate[d] = s; delete inCorso[d]; return s; },
+              function (e) { delete inCorso[d]; throw e; });
+    }
+    return inCorso[d];
+  }
   function precarica() {
-    wednesdays(state && state.admin ? 12 : 0).forEach(function (d) {
-      if (d === curDate || cacheSerate[d]) return;
-      api({ action: 'state', date: d, nome: myName() }).then(function (s) { cacheSerate[d] = s; }).catch(function () { });
-    });
+    wednesdays(state && state.admin ? 12 : 0).forEach(function (d) { if (d !== curDate && !cacheSerate[d]) chiedi(d).catch(function () { }); });
   }
   function load() {
     var d = curDate, primo = !Object.keys(cacheSerate).length;
-    return api({ action: 'state', date: d, nome: myName() }).then(function (s) {
-      cacheSerate[d] = s;
+    if (primo) setTimeout(precarica, 0);
+    return chiedi(d).then(function (s) {
       if (d !== curDate) return;
       state = s;
-      if (primo) setTimeout(precarica, 300);
+      $('turni').classList.remove('attesa');
       if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi, satispay: s.config.satispay || '', speciali: s.config.speciali || {}, postiTurno: s.config.postiTurno || {} }));
       render();
     }).catch(function (e) {
@@ -147,8 +152,8 @@
       b.append(el('small', null, d < next ? 'concluso' : dateLabel(d, { weekday: 'long' })), document.createTextNode(dateLabel(d, { day: 'numeric', month: 'long' })));
       b.onclick = function () {
         if (d === curDate) return; curDate = d; renderDates();
-        if (cacheSerate[d]) { state = cacheSerate[d]; render(); } else $('turni').replaceChildren(el('p', 'empty', 'Caricamento dei turni…'));
-        load();
+        if (cacheSerate[d]) { state = cacheSerate[d]; render(); load(); }
+        else { $('turni').classList.add('attesa'); load(); }
       };
       box.append(b);
     });
@@ -366,7 +371,7 @@
   // --- eventi ---
   $('nome').value = lsGet('fv-nome') || '';
   var nomeT;
-  $('nome').addEventListener('input', function () { lsSet('fv-nome', myName()); render(); clearTimeout(nomeT); nomeT = setTimeout(load, 700); });
+  $('nome').addEventListener('input', function () { lsSet('fv-nome', myName()); render(); clearTimeout(nomeT); nomeT = setTimeout(function () { cacheSerate = {}; load(); }, 700); });
   $('verInviaForm').onsubmit = function (e) {
     e.preventDefault();
     var em = $('verEmail').value.trim(); if (!em) return;
