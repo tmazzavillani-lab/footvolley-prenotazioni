@@ -1,5 +1,6 @@
 // --- Collegamento a Google Sheets (web app) ---
 // Impostazioni progetto > Proprietà script: ADMIN_PIN = il tuo PIN istruttore.
+// Se lo script non è creato dal foglio (Estensioni > Apps Script), aggiungi anche SHEET_ID = ID del Google Sheet.
 
 function doGet(e) { return fvOut_(fvHandle_((e && e.parameter) || {})); }
 function doPost(e) {
@@ -31,7 +32,8 @@ var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data
 var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', D: 'Pagamenti dichiarati' };
 
 function fvSheet_(k) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName(FV_SHEET[k]);
+  var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  var ss = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName(FV_SHEET[k]);
   if (!sh) {
     sh = ss.insertSheet(FV_SHEET[k]);
     sh.getRange('A:F').setNumberFormat('@');

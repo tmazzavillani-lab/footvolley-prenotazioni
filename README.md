@@ -53,4 +53,7 @@ versione**, così l'URL resta lo stesso.
   l'app in modalità prova. Pubblicata su https://tmazzavillani-lab.github.io/footvolley-prenotazioni/
 - 2026-10-02: pulsante di pagamento Satispay (link configurabile dall'Area istruttore). 
 - 2026-10-02: stato pagamento accanto a ogni nome ("Ho pagato" del ragazzo + conferma istruttore,
-  foglio *Pagamenti dichiarati*). Da fare: collegare il Google Sheet (passi sopra) e provare dal telefono.
+  foglio *Pagamenti dichiarati*). 
+- 2026-10-02: collegato il Google Sheet "Footvolley prenotazioni" (script standalone con proprietà
+  SHEET_ID e ADMIN_PIN). Provati sul backend vero: prenotazione, "Ho pagato", annullo (solo dallo
+  stesso telefono). Da fare: inserire i fissi e il link Satispay dall'Area istruttore, prova dal telefono.

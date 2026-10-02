@@ -17,7 +17,7 @@ function fvFixConfig(c) {
     posti: c.posti >= 1 && c.posti <= 30 ? Math.round(c.posti) : 6,
     fissi: {},
     annullate: Array.isArray(c.annullate) ? c.annullate.filter(fvIsWed) : [],
-    satispay: /^https:\/\/[^\s<>"']+$/.test(String(c.satispay || '').trim()) ? String(c.satispay).trim().slice(0, 300) : ''
+    satispay: /^https:\/\/[^\s<>\x22\x27]+$/.test(String(c.satispay || '').trim()) ? String(c.satispay).trim().slice(0, 300) : ''
   };
   FV_TURNI.forEach(function (t) {
     var list = [];
