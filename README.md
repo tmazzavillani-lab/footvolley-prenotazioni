@@ -83,3 +83,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02 (script v11): verifica del nome con codice via email (foglio *Atleti verificati*), obbligatoria per prenotarsi/confermare; istruttore: elenco atleti verificati e Sblocca. Tolto il promemoria calendario. Lo script invia email dal Gmail dell'istruttore (MailApp, autorizzato).
 - 2026-10-02: istruzioni di registrazione con email nella guida; mercoledì precaricati per passare dall'uno all'altro senza attesa.
 - 2026-10-02 (script v12): sicurezza area istruttore: PIN solo per la sessione (sessionStorage, cancellato chiudendo la scheda) e uscita automatica dopo 30 min di inattività; campo PIN non salvabile dal browser; blocco 15 min dopo 5 PIN sbagliati (CacheService). Messaggi "dispositivo" invece di "telefono".
+- 2026-10-02: Area istruttore nascosta: si apre toccando il logo 5 volte o con il link .../#tg-staff; si richiude con Esci o per inattività.

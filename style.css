@@ -168,3 +168,5 @@ body.busy #turni button,body.busy #turni .pay{pointer-events:none;opacity:.6}
 
 /* PIN nascosto senza essere un campo password: il browser non propone di salvarlo */
 input.pin{-webkit-text-security:disc;text-security:disc}
+
+.logo{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}

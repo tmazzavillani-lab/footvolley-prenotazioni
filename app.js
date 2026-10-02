@@ -13,7 +13,7 @@
   function ssGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
   function ssSet(k, v) { try { if (v == null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) { } }
   lsSet('fv-pin', null); // vecchie versioni lo salvavano per sempre
-  var PIN = VISTA_ATLETA ? null : ssGet('fv-pin'), ultimaAttivita = Date.now();
+  var PIN = VISTA_ATLETA ? null : ssGet('fv-pin'), ultimaAttivita = Date.now(), areaVisibile = !!ssGet('fv-area');
   ['click', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, function () { ultimaAttivita = Date.now(); }, true); });
   var state = null, curDate = null, busy = false, adminCfg = null; cacheSerate = {};
 
@@ -322,6 +322,7 @@
     FV_TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x && keep[T.k]) x.value = keep[T.k]; });
     if (foc && /^add-/.test(foc) && $(foc)) $(foc).focus();
 
+    $('adminBox').hidden = VISTA_ATLETA || !(admin || areaVisibile);
     $('logout').hidden = !admin;
     $('login').hidden = admin;
     $('adminPanel').hidden = !admin;
@@ -414,7 +415,7 @@
     api({ action: 'login' }).then(function () { ssSet('fv-pin', pin); $('pin').value = ''; adminCfg = null; cacheSerate = {}; return load(); })
       .catch(function (err) { PIN = null; toast(err.message, true); });
   };
-  $('logout').onclick = function () { PIN = null; ssSet('fv-pin', null); adminCfg = null; cacheSerate = {}; load(); };
+  $('logout').onclick = function () { PIN = null; ssSet('fv-pin', null); areaVisibile = false; ssSet('fv-area', null); adminCfg = null; cacheSerate = {}; load(); };
   $('toggleDate').onclick = function () { act({ action: 'toggleDate', annullata: !state.annullata }, state.annullata ? 'Serata riattivata' : 'Serata annullata'); };
   $('prezzo').onchange = function () { var v = parseFloat(this.value); if (v >= 0) adminCfg.prezzo = v; };
   $('satispay').onchange = function () { adminCfg.satispay = this.value.trim(); };
@@ -443,6 +444,18 @@
   // Guida aperta alla prima visita, poi chiusa
   if (!lsGet('fv-guida')) { $('guida').open = true; lsSet('fv-guida', '1'); }
   if (VISTA_ATLETA) { $('adminBox').hidden = true; $('vistaAtleta').hidden = false; }
+  // Area istruttore nascosta: si apre toccando il logo 5 volte di fila o con il link …/#tg-staff
+  function apriArea() {
+    areaVisibile = true; ssSet('fv-area', '1');
+    $('adminBox').hidden = VISTA_ATLETA;
+    if (!VISTA_ATLETA) { $('adminBox').scrollIntoView({ behavior: 'smooth' }); setTimeout(function () { $('pin').focus(); }, 400); }
+  }
+  var tocchiLogo = 0, tocchiT;
+  $('logo').addEventListener('click', function () {
+    tocchiLogo++; clearTimeout(tocchiT); tocchiT = setTimeout(function () { tocchiLogo = 0; }, 2000);
+    if (tocchiLogo >= 5) { tocchiLogo = 0; apriArea(); }
+  });
+  if (location.hash === '#tg-staff') { apriArea(); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { } }
   var IBAN = (window.FV_IBAN || '').trim();
   if (IBAN) {
     $('iban').textContent = IBAN;
@@ -457,7 +470,7 @@
   load();
   setInterval(function () { if (!busy && document.visibilityState === 'visible') load(); }, 30000);
   setInterval(function () {
-    if (PIN && Date.now() - ultimaAttivita > 30 * 60000) { PIN = null; ssSet('fv-pin', null); adminCfg = null; cacheSerate = {}; toast('Uscito dall’area istruttore per inattività'); load(); }
+    if (PIN && Date.now() - ultimaAttivita > 30 * 60000) { PIN = null; ssSet('fv-pin', null); areaVisibile = false; ssSet('fv-area', null); adminCfg = null; cacheSerate = {}; toast('Uscito dall’area istruttore per inattività'); load(); }
   }, 60000);
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && !busy) load(); });
 })();
