@@ -173,6 +173,7 @@
             });
           }
           if (daConf) li.append(btn('link back', 'Conferma', function () { act({ action: 'add', turno: T.k, nome: p.nome }, p.nome + ' confermato'); }));
+          if (p.fisso && !p.riservato && p.id) li.append(btn('link back', 'Togli conferma', function () { act({ action: 'cancel', id: p.id }, p.nome + ' torna a posto riservato'); }, 'Annulla la conferma: torna posto riservato'));
           li.append(btn('link', p.fisso ? 'Assente' : 'Togli', function () {
             if (p.fisso) act({ action: 'absent', turno: T.k, nome: p.nome }, p.nome + ' segnato assente');
             else act({ action: 'cancel', id: p.id }, p.nome + ' tolto dal turno');
@@ -207,7 +208,7 @@
         g[1].forEach(function (a) {
           ab.append(el('span', 'who', a));
           var mine = me && fvNorm(a) === fvNorm(me);
-          if (admin) ab.append(btn('link back', 'Rimetti', function () { act({ action: 'add', turno: T.k, nome: a }, a + ' nel turno'); }));
+          if (admin) ab.append(btn('link back', 'Conferma', function () { act({ action: 'add', turno: T.k, nome: a }, a + ' confermato nel turno'); }, 'Rimettilo nel turno come confermato'));
         });
         card.append(ab);
       });
