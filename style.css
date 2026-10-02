@@ -144,3 +144,9 @@ form.add label.prova{flex-basis:100%;font-size:.85rem;color:var(--muted);display
 .tag.prezzo{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
 
 .dot.none{display:none}
+
+.chip .linkbtn{width:auto;height:auto;border-radius:999px;padding:1px 8px;font:600 .75rem var(--f-body);color:var(--sea);background:var(--surface)}
+.hintrow{flex-basis:100%;font-size:.8rem;color:var(--muted)}
+.linkbox{background:var(--sea-soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.linkbox p{margin:0}
+.linkurl{font-size:.8rem;overflow-wrap:anywhere;background:var(--surface);padding:6px 8px;border-radius:8px}

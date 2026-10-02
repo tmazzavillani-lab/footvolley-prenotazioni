@@ -123,7 +123,7 @@
     var box = $('turni'); box.replaceChildren();
     var tot = 0, prove = 0, gratis = 0, previsto = 0, incassato = 0, perMetodo = { satispay: 0, contanti: 0, bonifico: 0 };
     var myTurn = null;
-    if (me) FV_TURNI.forEach(function (T) { if (state.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(me); })) myTurn = myTurn || T; });
+    if (me) FV_TURNI.forEach(function (T) { if (state.turni[T.k].people.some(function (x) { return !x.riservato && fvNorm(x.nome) === fvNorm(me); })) myTurn = myTurn || T; });
     FV_TURNI.forEach(function (T) {
       var t = state.turni[T.k], n = t.count, cap = cfg.posti, started = fvStarted(curDate, T.k, now);
       tot += n;
@@ -135,10 +135,10 @@
       for (var i = 0; i < Math.max(cap, n); i++) { var c = el('i'); if (i < n) c.className = t.people[i].fisso ? 'f' : 'x'; bar.append(c); }
       card.append(bar);
 
-      var ul = el('ul', 'people'), inList = false;
+      var ul = el('ul', 'people'), inList = false, mioRiservato = false;
       t.people.forEach(function (p) {
         var isMe = p.mine || (me && fvNorm(p.nome) === fvNorm(me));
-        if (isMe) inList = true;
+        if (isMe && p.riservato) mioRiservato = true; else if (isMe) inList = true;
         var prezzo = p.prezzo != null ? p.prezzo : cfg.prezzo, free = !!p.gratis;
         if (admin) {
           if (p.pagato && p.metodo === 'prova') prove++;
@@ -148,13 +148,13 @@
             if (p.pagato) { incassato += prezzo; if (perMetodo[p.metodo] != null) perMetodo[p.metodo] += prezzo; }
           }
         }
-        var daConf = p.fisso && !p.confermato;
+        var daConf = !!p.riservato;
         var li = el('li', 'p' + (isMe ? ' mine' : ''));
         var vedoPag = admin || p.pagato !== undefined;
         var dot = el('span', 'dot' + (!vedoPag ? ' none' : p.pagato || free ? ' ok' : p.dichiarato ? ' wait' : ''));
         dot.title = free ? 'Gratis' : p.pagato ? 'Pagato' : p.dichiarato ? 'Pagamento da verificare' : 'Da pagare';
         dot.setAttribute('aria-label', dot.title);
-        li.append(dot, el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? (daConf ? ' wait' : '') : ' x'), p.fisso ? (daConf ? 'da confermare' : 'fisso ✓') : 'aggiunto'));
+        li.append(dot, el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? (daConf ? ' wait' : '') : ' x'), p.fisso ? (daConf ? 'posto riservato' : 'fisso ✓') : 'aggiunto'));
         if (admin && prezzo !== cfg.prezzo) li.append(el('span', 'tag prezzo', free ? 'gratis' : eur(prezzo)));
         if (admin) {
           if (free && !p.pagato) {
@@ -171,13 +171,13 @@
               li.append(btn('pay', METODI_ADMIN[m], function () { act({ action: 'pay', turno: T.k, nome: p.nome, paid: true, metodo: m }); }, m === 'prova' ? 'Prova gratuita: non paga' : 'Pagato con ' + METODI_ADMIN[m]));
             });
           }
-          if (daConf) li.append(btn('link back', 'Conferma', function () { act({ action: 'confirm', turno: T.k, nome: p.nome }, p.nome + ' confermato'); }));
+          if (daConf) li.append(btn('link back', 'Conferma', function () { act({ action: 'add', turno: T.k, nome: p.nome }, p.nome + ' confermato'); }));
           li.append(btn('link', p.fisso ? 'Assente' : 'Togli', function () {
             if (p.fisso) act({ action: 'absent', turno: T.k, nome: p.nome }, p.nome + ' segnato assente');
             else act({ action: 'cancel', id: p.id }, p.nome + ' tolto dal turno');
           }));
         } else {
-          var mio = p.mine || (p.fisso && isMe && p.telefono !== 'altro');
+          var mio = !!p.mine;
           if (!mio) { /* i pagamenti degli altri non si vedono */ }
           else if (free && !p.pagato) li.append(el('span', 'paid ok', 'Gratis'));
           else if (p.pagato) li.append(el('span', 'paid ok', p.metodo === 'prova' ? 'Prova gratuita' : 'Pagato'));
@@ -193,11 +193,7 @@
           }
         }
         if (!admin && !started && !state.annullata) {
-          if (p.mine) li.append(btn('link', 'Annulla', function () { act({ action: 'cancel', id: p.id }, 'Prenotazione annullata'); }));
-          else if (p.fisso && isMe && p.telefono !== 'altro') {
-            if (daConf) li.append(btn('pay wait', 'Confermo', function () { act({ action: 'confirm', turno: T.k, nome: p.nome }, 'Presenza confermata, a mercoledì!'); }));
-            li.append(btn('link', 'Non vengo', function () { act({ action: 'absent', turno: T.k, nome: p.nome }, 'Ok, segnato che questa volta non vieni'); }));
-          }
+          if (p.mine) li.append(btn('link', p.fisso ? 'Non vengo' : 'Annulla', function () { act({ action: 'cancel', id: p.id }, p.fisso ? 'Ok, il tuo posto si è liberato per questa sera' : 'Prenotazione annullata'); }));
         }
         ul.append(li);
       });
@@ -210,7 +206,7 @@
         g[1].forEach(function (a) {
           ab.append(el('span', 'who', a));
           var mine = me && fvNorm(a) === fvNorm(me);
-          if (admin || (mine && !started && !state.annullata && n < cap)) ab.append(btn('link back', admin ? 'Rimetti' : 'Ci sono', function () { act({ action: 'confirm', turno: T.k, nome: a }, a + ' nel turno'); }));
+          if (admin) ab.append(btn('link back', 'Rimetti', function () { act({ action: 'add', turno: T.k, nome: a }, a + ' nel turno'); }));
         });
         card.append(ab);
       });
@@ -231,6 +227,7 @@
         if (state.annullata) { label = 'Annullato'; dis = true; }
         else if (started) { label = 'Turno già iniziato'; dis = true; }
         else if (inList) { label = 'Sei in lista'; dis = true; }
+        else if (mioRiservato) { label = 'Conferma il tuo posto'; }
         else if (myTurn) { label = 'Sei già nel turno ' + myTurn.l; dis = true; }
         else if (n >= cap) { label = 'Turno pieno'; dis = true; }
         var b = btn('btn primary', label, function () {
@@ -336,6 +333,7 @@
   };
 
   $('demo').hidden = !!API;
+
   // Guida aperta alla prima visita, poi chiusa
   if (!lsGet('fv-guida')) { $('guida').open = true; lsSet('fv-guida', '1'); }
   if (VISTA_ATLETA) { $('adminBox').hidden = true; $('vistaAtleta').hidden = false; }

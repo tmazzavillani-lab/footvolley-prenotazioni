@@ -28,7 +28,7 @@ function fvOut_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], C: ['data', 'turno', 'nome', 'creato'], K: ['nome', 'token', 'creato'], D: ['data', 'turno', 'nome', 'metodo', 'creato'] };
+var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], C: ['data', 'turno', 'nome', 'creato'], K: ['nome', 'token', 'creato', 'codice'], D: ['data', 'turno', 'nome', 'metodo', 'creato'] };
 var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', C: 'Conferme fissi', K: 'Telefoni fissi', D: 'Pagamenti dichiarati' };
 var fvCache_ = {};
 
