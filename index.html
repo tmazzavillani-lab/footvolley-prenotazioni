@@ -6,7 +6,7 @@
 <title>Ravenna Footvolley · Prenotazioni</title>
 <script>
   // Se il browser (anche quello di WhatsApp) ha in memoria una pagina vecchia, ricarica quella nuova
-  window.FV_VERSIONE = 38;
+  window.FV_VERSIONE = 39;
   (function () {
     try {
       fetch('versione.txt?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (v) {
@@ -26,7 +26,7 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=38">
+<link rel="stylesheet" href="style.css?v=39">
 </head>
 <body>
 <div class="wrap">
@@ -124,6 +124,9 @@
         <div class="margine"><span>Margine</span><b id="mMarg">€0</b><small id="mMargPrev"></small></div>
       </div>
       <p class="hint">Il campo costa €<span id="costoOra">24</span> l'ora alla struttura: si conta ogni turno con almeno un iscritto, le serate annullate non costano. Margine = incassato − costo campo. Il mese somma le serate già caricate (ultime 12 e prossime 4).</p>
+      <h3>Da saldare alla struttura</h3>
+      <table class="struttura"><thead><tr><th>Mese</th><th>Ore giocate</th><th>Da saldare</th><th>Ancora previsto</th></tr></thead><tbody id="struttura"></tbody></table>
+      <p class="hint">Da saldare = turni già giocati (con almeno un iscritto) × €<span id="costoOra2">24</span>. Ancora previsto = turni del mese non ancora giocati che oggi hanno iscritti.</p>
       <p class="hint">Nei turni qui sopra ora puoi segnare chi ha pagato, togliere o aggiungere persone senza limite di posti.</p>
       <div class="row"><a class="btn" href="?atleta">Vedi come atleta</a><button class="btn" id="toggleDate">Annulla questa serata</button></div>
       <h3>Ragazzi fissi</h3>
@@ -142,8 +145,8 @@
     </div>
   </section>
 </div>
-<script src="config.js?v=38"></script>
-<script src="core.js?v=38"></script>
-<script src="app.js?v=38"></script>
+<script src="config.js?v=39"></script>
+<script src="core.js?v=39"></script>
+<script src="app.js?v=39"></script>
 </body>
 </html>

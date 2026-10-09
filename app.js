@@ -420,6 +420,30 @@
     $('mCosto').textContent = eur(m.costo);
     segno($('mMarg'), m.incassato - m.costo);
     $('mMargPrev').textContent = 'se pagano tutti: ' + conSegno(m.previsto - m.costo);
+    renderStruttura();
+  }
+
+  // Quanto pagare alla struttura, mese per mese: turni già giocati e turni ancora da giocare
+  function renderStruttura() {
+    var now = nowRome(), mesi = {}, ordine = [];
+    wednesdays(12).forEach(function (d) {
+      var s = cacheSerate[d]; if (!s || !s.turni || s.annullata) return;
+      var k = d.slice(0, 7);
+      if (!mesi[k]) { mesi[k] = { ore: 0, futuro: 0 }; ordine.push(k); }
+      FV_TURNI.forEach(function (T) {
+        var t = s.turni[T.k]; if (!t || !t.count) return;
+        if (fvStarted(d, T.k, now)) mesi[k].ore++; else mesi[k].futuro++;
+      });
+    });
+    var tb = $('struttura'); tb.replaceChildren();
+    $('costoOra2').textContent = COSTO_ORA;
+    if (!ordine.length) { var vr = el('tr'), vc = el('td', 'empty', 'Nessuna serata'); vc.colSpan = 4; vr.append(vc); tb.append(vr); return; }
+    ordine.sort().reverse().forEach(function (k) {
+      var m = mesi[k], nome = dateLabel(k + '-15', { month: 'long', year: 'numeric' }), tr = el('tr');
+      tr.append(el('td', null, nome.charAt(0).toUpperCase() + nome.slice(1)), el('td', null, String(m.ore)),
+        el('td', 'tot', eur(m.ore * COSTO_ORA)), el('td', null, m.futuro ? '+' + eur(m.futuro * COSTO_ORA) + ' (' + m.futuro + (m.futuro === 1 ? ' ora)' : ' ore)') : '—'));
+      tb.append(tr);
+    });
   }
 
   function renderFissi() {
