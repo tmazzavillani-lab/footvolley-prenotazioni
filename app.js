@@ -155,6 +155,9 @@
     } else if (p.action === 'declare') {
       var d = trova(t.people, p.nome);
       if (d) { d.dichiarato = !p.undo; d.metodo = p.undo ? '' : p.metodo; }
+    } else if (p.action === 'sconto') {
+      var sc = trova(t.people, p.nome);
+      if (sc && p.prezzo !== '') { sc.prezzo = p.prezzo; sc.sconto = true; sc.gratis = p.prezzo === 0; }
     } else if (p.action === 'pay') {
       var g = trova(t.people, p.nome);
       if (g) { g.pagato = !!p.paid; if (p.paid) { g.metodo = p.metodo || g.metodo; g.dichiarato = false; } }
@@ -246,7 +249,14 @@
         dot.title = free ? 'Gratis' : p.pagato ? 'Pagato' : p.dichiarato ? 'Pagamento da verificare' : 'Da pagare';
         dot.setAttribute('aria-label', dot.title);
         li.append(dot, el('span', 'n', p.nome), el('span', 'tag' + (p.fisso ? (daConf ? ' wait' : '') : ' x'), p.fisso ? (daConf ? 'posto riservato' : 'fisso ✓') : 'aggiunto'));
-        if (admin && prezzo !== cfg.prezzo) li.append(el('span', 'tag prezzo', free ? 'gratis' : eur(prezzo)));
+        if (admin) li.append(btn('tag prezzo' + (p.sconto ? ' sconto' : ''), (p.sconto ? 'sconto ' : '') + (free ? 'gratis' : eur(prezzo)), function () {
+          var v = prompt('Prezzo di ' + p.nome + ' solo per questa serata (€).\nScrivi 0 per gratis, lascia vuoto per tornare al prezzo normale.', p.sconto ? String(prezzo) : '');
+          if (v === null) return;
+          v = v.trim().replace(',', '.').replace('€', '');
+          if (/^gratis$/i.test(v)) v = '0';
+          if (v !== '' && !(parseFloat(v) >= 0)) { toast('Scrivi un numero, es. 10', true); return; }
+          act({ action: 'sconto', turno: T.k, nome: p.nome, prezzo: v === '' ? '' : parseFloat(v) }, v === '' ? 'Prezzo normale per ' + p.nome : 'Prezzo di ' + p.nome + ' stasera: ' + (parseFloat(v) ? eur(parseFloat(v)) : 'gratis'));
+        }, 'Sconto solo per questa serata'));
         if (admin) {
           if (free && !p.pagato) {
             li.append(el('span', 'paid ok', 'Non paga'));

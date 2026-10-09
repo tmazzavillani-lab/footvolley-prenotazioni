@@ -28,8 +28,8 @@ function fvOut_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], D: ['data', 'turno', 'nome', 'metodo', 'creato'], U: ['nome', 'email', 'token', 'verificato', 'codice', 'creato'] };
-var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', D: 'Pagamenti dichiarati', U: 'Atleti verificati' };
+var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], D: ['data', 'turno', 'nome', 'metodo', 'creato'], U: ['nome', 'email', 'token', 'verificato', 'codice', 'creato'], S: ['data', 'turno', 'nome', 'prezzo'] };
+var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', D: 'Pagamenti dichiarati', U: 'Atleti verificati', S: 'Sconti serata' };
 // Cache valida per una sola richiesta: ogni foglio e le proprietà si leggono una volta sola
 var fvProps_ = null, fvSS_ = null, fvSh_ = {}, fvRows_ = {};
 
@@ -87,7 +87,7 @@ var FvSheetStore = {
 
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.
 function setup() {
-  ['P', 'A', 'G', 'D', 'U'].forEach(fvSheet_);
+  ['P', 'A', 'G', 'D', 'U', 'S'].forEach(fvSheet_);
   Logger.log('Email rimaste oggi: ' + MailApp.getRemainingDailyQuota());
   if (!FvSheetStore.adminPin()) Logger.log('Ricorda: imposta ADMIN_PIN nelle Proprietà script.');
 }

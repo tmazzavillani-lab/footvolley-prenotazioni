@@ -89,7 +89,7 @@ function fvScaduta(d, nowStr) { return nowStr >= d + ' ' + FV_ORA_CONFERMA; }
 // I fissi si prenotano come tutti: finché non lo fanno il loro posto è "riservato" (fino alle 14 del mercoledì)
 function fvState(cfg, st, d, token, admin, nowStr) {
   var day = function (r) { return r.data === d; };
-  var P = st.list('P').filter(day), A = st.list('A').filter(day), G = st.list('G').filter(day), D = st.list('D').filter(day);
+  var P = st.list('P').filter(day), A = st.list('A').filter(day), G = st.list('G').filter(day), D = st.list('D').filter(day), S = st.list('S').filter(day);
   var scaduta = fvScaduta(d, nowStr), turni = {};
   FV_TURNI.forEach(function (T) {
     var k = T.k, fx = fvFissiAl(cfg, k, d);
@@ -105,14 +105,16 @@ function fvState(cfg, st, d, token, admin, nowStr) {
     }));
     people.forEach(function (x) {
       var same = function (r) { return r.turno === k && fvNorm(r.nome) === fvNorm(x.nome); };
-      var g = G.filter(same)[0], dd = D.filter(same)[0], pz = fvPrezzo(cfg, x.nome);
+      var g = G.filter(same)[0], dd = D.filter(same)[0], sc = S.filter(same)[0], pz = fvPrezzo(cfg, x.nome);
+      // sconto della singola serata: prevale sul prezzo normale/concordato
+      if (sc && sc.prezzo !== '' && Number(sc.prezzo) >= 0) { pz = Number(sc.prezzo); x.sconto = true; }
       x.pagato = !!g;
       x.prezzo = pz;
       if (pz === 0) x.gratis = true;
       if (g) x.metodo = g.metodo || '';
       if (!g && dd) { x.dichiarato = true; x.metodo = dd.metodo || ''; }
       // i pagamenti di una persona li vedono solo lei e l'istruttore
-      if (!(admin || x.mine)) { delete x.pagato; delete x.dichiarato; delete x.metodo; delete x.gratis; delete x.prezzo; }
+      if (!(admin || x.mine)) { delete x.pagato; delete x.dichiarato; delete x.metodo; delete x.gratis; delete x.prezzo; delete x.sconto; }
     });
     turni[k] = { posti: fvPosti(cfg, k), people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length };
   });
@@ -216,7 +218,7 @@ function fvRoute(p, st, nowStr) {
   }
 
   var k = p.turno, nome = fvClean(p.nome);
-  var needTurno = ['book', 'absent', 'add', 'pay', 'declare'].indexOf(a) >= 0;
+  var needTurno = ['book', 'absent', 'add', 'pay', 'declare', 'sconto'].indexOf(a) >= 0;
   if (needTurno && !fvTurno(k)) throw new Error('Turno non valido');
   var full = needTurno ? fvState(cfg, st, d, token, true, nowStr) : null, cur = full ? full.turni[k] : null;
   var isFisso = needTurno && fvHas(fvFissiAl(cfg, k, d), nome);
@@ -251,6 +253,7 @@ function fvRoute(p, st, nowStr) {
     var mr = function (r) { return r.data === d && r.turno === row.turno && fvNorm(r.nome) === fvNorm(row.nome); };
     st.removeWhere('G', mr);
     st.removeWhere('D', mr);
+    st.removeWhere('S', mr);
     // un fisso che annulla da solo libera il suo posto per quella sera
     if (!admin && fvHas(fvFissiAl(cfg, row.turno, d), row.nome)) st.add('A', { data: d, turno: row.turno, nome: row.nome });
   } else if (a === 'absent') {
@@ -261,6 +264,7 @@ function fvRoute(p, st, nowStr) {
     st.add('A', { data: d, turno: k, nome: nome });
     st.removeWhere('G', match);
     st.removeWhere('D', match);
+    st.removeWhere('S', match);
   } else if (a === 'pay') {
     if (!admin) throw new Error('Serve il PIN istruttore');
     if (!trova(nome)) throw new Error(nome + ' non è in questo turno');
@@ -268,6 +272,15 @@ function fvRoute(p, st, nowStr) {
     st.removeWhere('G', match);
     st.removeWhere('D', match);
     if (p.paid) st.add('G', { data: d, turno: k, nome: nome, metodo: met });
+  } else if (a === 'sconto') {
+    // prezzo di una persona solo per questa serata (vuoto = torna al prezzo normale)
+    if (!admin) throw new Error('Serve il PIN istruttore');
+    var chi = trova(nome);
+    if (!chi) throw new Error(nome + ' non è in questo turno');
+    var vuoto = p.prezzo === '' || p.prezzo == null, sp = Number(p.prezzo);
+    if (!vuoto && !(sp >= 0 && sp <= 999)) throw new Error('Prezzo non valido');
+    st.removeWhere('S', match);
+    if (!vuoto) st.add('S', { data: d, turno: k, nome: chi.nome, prezzo: String(Math.round(sp * 100) / 100) });
   } else if (a === 'declare') {
     var who = trova(nome);
     if (!who) throw new Error(nome + ' non è in questo turno');
@@ -320,8 +333,8 @@ function fvOut_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], D: ['data', 'turno', 'nome', 'metodo', 'creato'], U: ['nome', 'email', 'token', 'verificato', 'codice', 'creato'] };
-var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', D: 'Pagamenti dichiarati', U: 'Atleti verificati' };
+var FV_HEAD = { P: ['id', 'data', 'turno', 'nome', 'token', 'creato'], A: ['data', 'turno', 'nome'], G: ['data', 'turno', 'nome', 'metodo'], D: ['data', 'turno', 'nome', 'metodo', 'creato'], U: ['nome', 'email', 'token', 'verificato', 'codice', 'creato'], S: ['data', 'turno', 'nome', 'prezzo'] };
+var FV_SHEET = { P: 'Prenotazioni', A: 'Assenze', G: 'Pagamenti', D: 'Pagamenti dichiarati', U: 'Atleti verificati', S: 'Sconti serata' };
 // Cache valida per una sola richiesta: ogni foglio e le proprietà si leggono una volta sola
 var fvProps_ = null, fvSS_ = null, fvSh_ = {}, fvRows_ = {};
 
@@ -379,7 +392,7 @@ var FvSheetStore = {
 
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.
 function setup() {
-  ['P', 'A', 'G', 'D', 'U'].forEach(fvSheet_);
+  ['P', 'A', 'G', 'D', 'U', 'S'].forEach(fvSheet_);
   Logger.log('Email rimaste oggi: ' + MailApp.getRemainingDailyQuota());
   if (!FvSheetStore.adminPin()) Logger.log('Ricorda: imposta ADMIN_PIN nelle Proprietà script.');
 }

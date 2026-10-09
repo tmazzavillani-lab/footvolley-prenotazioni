@@ -91,6 +91,7 @@ ul.people{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;
 .totals b{font-family:var(--f-display);font-size:1.6rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
 .totals .paid b{color:var(--ok)}
 .totals .due b{color:var(--warn)}
+.totals div.paid{border-radius:0;padding:10px 12px;font-size:inherit;font-weight:inherit;white-space:normal}
 .totals .margine b.neg{color:var(--warn)}
 .totals .margine b.pos{color:var(--ok)}
 #meseBox{margin-top:8px}
@@ -144,7 +145,8 @@ form.add{flex-wrap:wrap}
 form.add label.prova{flex-basis:100%;font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:6px}
 
 .settings textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%;text-transform:none;letter-spacing:0}
-.tag.prezzo{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.tag.prezzo{background:var(--bg);color:var(--ink);border:1px solid var(--line);cursor:pointer;font-family:inherit}
+.tag.prezzo.sconto{background:var(--sun-soft);border-color:var(--sun)}
 
 .dot.none{display:none}
 
