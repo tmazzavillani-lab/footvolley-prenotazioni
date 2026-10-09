@@ -207,6 +207,7 @@
       $('verInviaForm').hidden = io.verificato;
       if (io.verificato) $('verCodiceForm').hidden = true;
     }
+    renderSaldare(admin, io, me);
     $('annullata').hidden = !state.annullata;
     var pay = $('payBar');
     pay.hidden = !cfg.satispay || state.annullata;
@@ -373,6 +374,31 @@
       $('toggleDate').textContent = state.annullata ? 'Riattiva questa serata' : 'Annulla questa serata';
       renderFissi();
     }
+  }
+
+  // Avviso all'atleta verificato: allenamenti passati ancora da pagare
+  function renderSaldare(admin, io, me) {
+    var box = $('saldare'), deb = !admin && io && io.verificato && me && fvNorm(io.nome) === fvNorm(me) && io.daSaldare || [];
+    box.replaceChildren(); box.hidden = !deb.length;
+    deb.forEach(function (x) {
+      var r = el('div', 'debito'), giorno = dateLabel(x.data, { day: '2-digit', month: 'short' });
+      if (x.dichiarato) {
+        r.append(el('b', null, 'Allenamento del ' + giorno + ': pagamento in attesa di conferma'), el('span', 'paid wait', 'Pagato con ' + (METODI[x.metodo] || '?')));
+      } else {
+        r.append(el('b', null, 'Allenamento del ' + giorno + ' ancora da saldare'), el('span', null, eur(x.prezzo) + ' · Ho pagato con:'));
+        Object.keys(METODI).forEach(function (m) {
+          r.append(btn('pay', METODI[m], function () { dichiaraPassato(x, m); }));
+        });
+      }
+      box.append(r);
+    });
+  }
+  function dichiaraPassato(x, m) {
+    if (busy) return;
+    busy = true; toast('Un attimo…');
+    api({ action: 'declare', date: x.data, turno: x.turno, nome: state.io.nome, metodo: m })
+      .then(function () { busy = false; toast('Grazie! L’istruttore verificherà il pagamento'); delete cacheSerate[x.data]; delete cacheSerate[curDate]; return load(); })
+      .catch(function (e) { busy = false; toast(e.message, true); });
   }
 
   // Riepilogo del mese della serata scelta, sulle serate già caricate

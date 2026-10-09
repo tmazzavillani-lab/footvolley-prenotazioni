@@ -166,6 +166,10 @@ body.busy #turni button,body.busy #turni .pay{pointer-events:none;opacity:.6}
 .verifica{background:var(--sun-soft);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;margin-top:6px}
 .verifica.ok{background:var(--ok-soft);color:var(--ok)}
 .verifica p{margin:0;font-size:.9rem}
+.saldare{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.saldare[hidden]{display:none}
+.debito{background:var(--warn-soft);border-radius:12px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.92rem}
+.debito b{flex-basis:100%;color:var(--warn)}
 .verifica input{flex:1;min-width:0}
 .atleti{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 

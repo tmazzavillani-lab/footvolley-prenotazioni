@@ -132,6 +132,20 @@ function fvMinuti(s) { return Date.parse(String(s).replace(' ', 'T') + ':00Z') /
 function fvVerificato(st, nome, token) {
   return !!token && st.list('U').some(function (r) { return r.verificato === 'si' && r.token === token && fvNorm(r.nome) === fvNorm(nome); });
 }
+// Allenamenti già iniziati di questa persona non ancora pagati (per l'avviso all'atleta verificato)
+function fvDaSaldare(cfg, st, nome, nowStr) {
+  var G = st.list('G'), D = st.list('D'), S = st.list('S'), out = [];
+  var same = function (x) { return function (r) { return r.data === x.data && r.turno === x.turno && fvNorm(r.nome) === fvNorm(x.nome); }; };
+  st.list('P').forEach(function (x) {
+    if (fvNorm(x.nome) !== fvNorm(nome) || !fvIsWed(x.data) || x.data < FV_INIZIO || cfg.annullate.indexOf(x.data) >= 0) return;
+    if (!fvTurno(x.turno) || !fvStarted(x.data, x.turno, nowStr) || G.some(same(x))) return;
+    var sc = S.filter(same(x))[0], pz = sc && sc.prezzo !== '' && Number(sc.prezzo) >= 0 ? Number(sc.prezzo) : fvPrezzo(cfg, nome);
+    if (!pz) return;
+    var dd = D.filter(same(x))[0];
+    out.push({ data: x.data, turno: x.turno, prezzo: pz, dichiarato: !!dd, metodo: dd ? dd.metodo || '' : '' });
+  });
+  return out.sort(function (a, b) { return a.data < b.data ? -1 : 1; });
+}
 function fvRegistrato(st, nome) {
   return st.list('U').filter(function (r) { return r.verificato === 'si' && fvNorm(r.nome) === fvNorm(nome); })[0];
 }
@@ -213,6 +227,7 @@ function fvRoute(p, st, nowStr) {
   if (a === 'state') {
     var stt = fvState(cfg, st, d, token, admin, nowStr), nn = fvClean(p.nome);
     if (nn) stt.io = { nome: nn, verificato: fvVerificato(st, nn, token), registrato: !!fvRegistrato(st, nn) };
+    if (nn && !admin && stt.io.verificato) stt.io.daSaldare = fvDaSaldare(cfg, st, nn, nowStr);
     return stt;
   }
 
@@ -284,7 +299,8 @@ function fvRoute(p, st, nowStr) {
     var who = trova(nome);
     if (!who) throw new Error(nome + ' non è in questo turno');
     if (who.pagato) throw new Error('Pagamento già verificato dall’istruttore');
-    var suo = who.id && token && st.list('P').some(function (r) { return r.id === who.id && r.token === token; });
+    // dal dispositivo della prenotazione, o da quello con cui ha verificato il nome
+    var suo = who.id && token && (st.list('P').some(function (r) { return r.id === who.id && r.token === token; }) || fvVerificato(st, who.nome, token));
     if (!admin && !suo) throw new Error('Puoi segnare il pagamento solo dal dispositivo con cui ti sei prenotato');
     st.removeWhere('D', match);
     if (!p.undo) {
