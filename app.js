@@ -423,6 +423,15 @@
     renderStruttura();
   }
 
+  var saldatiLoc = null;
+  function nomeMese(k) { return dateLabel(k + '-15', { month: 'long', year: 'numeric' }); }
+  function segnaSaldo(mese, saldato, importo) {
+    if (busy) return;
+    busy = true; toast('Un attimo…');
+    api({ action: 'saldo', mese: mese, saldato: saldato, importo: importo })
+      .then(function (r) { saldatiLoc = r.saldati; busy = false; toast(saldato ? 'Segnato: ' + nomeMese(mese) + ' saldato alla struttura' : 'Saldo tolto'); renderStruttura(); })
+      .catch(function (e) { busy = false; toast(e.message, true); });
+  }
   // Quanto pagare alla struttura, mese per mese: turni già giocati e turni ancora da giocare
   function renderStruttura() {
     var now = nowRome(), mesi = {}, ordine = [];
@@ -437,11 +446,26 @@
     });
     var tb = $('struttura'); tb.replaceChildren();
     $('costoOra2').textContent = COSTO_ORA;
-    if (!ordine.length) { var vr = el('tr'), vc = el('td', 'empty', 'Nessuna serata'); vc.colSpan = 4; vr.append(vc); tb.append(vr); return; }
+    var saldati = saldatiLoc || state.config.saldati || {};
+    if (!ordine.length) { var vr = el('tr'), vc = el('td', 'empty', 'Nessuna serata'); vc.colSpan = 5; vr.append(vc); tb.append(vr); return; }
     ordine.sort().reverse().forEach(function (k) {
       var m = mesi[k], nome = dateLabel(k + '-15', { month: 'long', year: 'numeric' }), tr = el('tr');
       tr.append(el('td', null, nome.charAt(0).toUpperCase() + nome.slice(1)), el('td', null, String(m.ore)),
         el('td', 'tot', eur(m.ore * COSTO_ORA)), el('td', null, m.futuro ? '+' + eur(m.futuro * COSTO_ORA) + ' (' + m.futuro + (m.futuro === 1 ? ' ora)' : ' ore)') : '—'));
+      var td = el('td', 'saldo'), sx = saldati[k], dovuto = m.ore * COSTO_ORA;
+      if (sx) {
+        tr.classList.add('saldato'); tr.cells[2].className = 'tot ok';
+        td.append(el('span', 'paid ok', '✓ Saldato ' + eur(sx.importo) + ' il ' + dateLabel(sx.il, { day: 'numeric', month: 'short' })));
+        if (dovuto > sx.importo) td.append(el('span', 'paid no', 'mancano ' + eur(dovuto - sx.importo)));
+        td.append(btn('link back', dovuto > sx.importo ? 'Aggiorna a ' + eur(dovuto) : 'Annulla', function () {
+          if (dovuto > sx.importo) segnaSaldo(k, true, dovuto); else if (confirm('Togliere il saldo di ' + nomeMese(k) + '?')) segnaSaldo(k, false);
+        }));
+      } else if (dovuto > 0) {
+        td.append(btn('btn small', 'Segna saldato', function () {
+          if (confirm('Hai pagato ' + eur(dovuto) + ' alla struttura per ' + nomeMese(k) + '?')) segnaSaldo(k, true, dovuto);
+        }));
+      }
+      tr.append(td);
       tb.append(tr);
     });
   }

@@ -175,6 +175,9 @@ body.busy #turni button,body.busy #turni .pay{pointer-events:none;opacity:.6}
 .struttura th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
 .struttura td{padding:8px;border-bottom:1px solid var(--line)}
 .struttura td.tot{font-weight:700;color:var(--warn)}
+.struttura td.tot.ok{color:var(--ok)}
+.struttura td.saldo{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.table-wrap{overflow-x:auto}
 .atleti{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 
 #turni.attesa{opacity:.45;pointer-events:none;transition:opacity .15s}

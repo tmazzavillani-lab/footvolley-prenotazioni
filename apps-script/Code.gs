@@ -22,8 +22,15 @@ function fvFixConfig(c) {
     annullate: Array.isArray(c.annullate) ? c.annullate.filter(fvIsWed) : [],
     satispay: /^https:\/\/[^\s<>\x22\x27]+$/.test(String(c.satispay || '').trim()) ? String(c.satispay).trim().slice(0, 300) : '',
     speciali: {},
-    postiTurno: {}
+    postiTurno: {},
+    saldati: {}
   };
+  // mesi già saldati alla struttura: { '2026-10': { il: '2026-10-31', importo: 72 } }
+  var sl = c.saldati && typeof c.saldati === 'object' ? c.saldati : {};
+  Object.keys(sl).forEach(function (m) {
+    var x = sl[m] || {};
+    if (/^\d{4}-\d{2}$/.test(m) && fvIsDay(x.il)) out.saldati[m] = { il: x.il, importo: Math.max(0, Math.round(Number(x.importo) * 100) / 100 || 0) };
+  });
   var pt = c.postiTurno && typeof c.postiTurno === 'object' ? c.postiTurno : {};
   FV_TURNI.forEach(function (t) { var v = Number(pt[t.k]); if (v >= 1 && v <= 30) out.postiTurno[t.k] = Math.round(v); });
   // prezzi concordati: { 'Nome Cognome': 10 }, 0 = gratis
@@ -122,7 +129,7 @@ function fvState(cfg, st, d, token, admin, nowStr) {
     date: d, annullata: cfg.annullate.indexOf(d) >= 0, admin: admin, turni: turni, scaduta: scaduta, oraConferma: FV_ORA_CONFERMA,
     config: { prezzo: cfg.prezzo, posti: cfg.posti, satispay: cfg.satispay }
   };
-  if (admin) { var pc = fvPublicConfig(cfg); res.config.fissi = pc.fissi; res.config.postiTurno = pc.postiTurno; res.config.speciali = pc.speciali; }
+  if (admin) { var pc = fvPublicConfig(cfg); res.config.fissi = pc.fissi; res.config.postiTurno = pc.postiTurno; res.config.speciali = pc.speciali; res.config.saldati = cfg.saldati; }
   return res;
 }
 
@@ -213,11 +220,21 @@ function fvRoute(p, st, nowStr) {
   if (a === 'login') return { admin: true };
   var ver = fvVerifica(a, p, st, nowStr, admin);
   if (ver) return ver;
+  if (a === 'saldo') {
+    // l'istruttore segna (o toglie) un mese come saldato alla struttura
+    if (!admin) throw new Error('Serve il PIN istruttore');
+    var mese = String(p.mese || '');
+    if (!/^\d{4}-\d{2}$/.test(mese)) throw new Error('Mese non valido');
+    if (p.saldato) cfg.saldati[mese] = { il: nowStr.slice(0, 10), importo: Math.max(0, Number(p.importo) || 0) };
+    else delete cfg.saldati[mese];
+    st.setConfig(cfg);
+    return { saldati: cfg.saldati };
+  }
   if (a === 'setConfig') {
     if (!admin) throw new Error('Serve il PIN istruttore');
     var oggi = nowStr.slice(0, 10), nf = {}, pf = p.fissi || {};
     FV_TURNI.forEach(function (t) { nf[t.k] = fvAggiornaFissi(cfg.fissi[t.k], pf[t.k], oggi); });
-    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay, speciali: p.speciali, postiTurno: p.postiTurno });
+    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay, speciali: p.speciali, postiTurno: p.postiTurno, saldati: cfg.saldati });
     if (p.satispay && !nc.satispay) throw new Error('Il link Satispay deve iniziare con https://');
     st.setConfig(nc);
     return { config: fvPublicConfig(nc) };
