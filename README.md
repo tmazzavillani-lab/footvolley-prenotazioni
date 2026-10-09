@@ -86,3 +86,4 @@ versione**, così l'URL resta lo stesso.
 - 2026-10-02: Area istruttore nascosta: si apre toccando il logo 5 volte o con il link .../#tg-staff; si richiude con Esci o per inattività.
 - 2026-10-02: 5 tocchi sul logo anche per richiudere l'area (ed esce). Aggiornamento automatico: index.html confronta FV_VERSIONE con versione.txt e ricarica se c'è una versione nuova (anche nel browser di WhatsApp). AD OGNI MODIFICA: aumentare insieme versione.txt, FV_VERSIONE e ?v=N in index.html.
 - 2026-10-02 (v35): mobile: 4 mercoledì in una riga, intestazione compatta, pagamento sotto i turni, messaggi fluttuanti in basso.
+- 2026-10-09 (v36): costi nell'Area istruttore: campo €24/ora (FV_COSTO_ORA in config.js), conta ogni turno con almeno un iscritto, serate annullate a zero. Per serata: costo campo e margine (incassato − costo, più "se pagano tutti"); riepilogo del mese sulle serate caricate. Solo app, script Apps invariato.

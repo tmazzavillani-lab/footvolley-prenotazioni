@@ -6,7 +6,7 @@
 <title>Ravenna Footvolley · Prenotazioni</title>
 <script>
   // Se il browser (anche quello di WhatsApp) ha in memoria una pagina vecchia, ricarica quella nuova
-  window.FV_VERSIONE = 35;
+  window.FV_VERSIONE = 36;
   (function () {
     try {
       fetch('versione.txt?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (v) {
@@ -26,7 +26,7 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=35">
+<link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 <div class="wrap">
@@ -112,7 +112,17 @@
         <div><span>Previsto</span><b id="tPrev">€0</b></div>
         <div class="paid"><span>Incassato</span><b id="tPaid">€0</b><small id="tMetodi"></small></div>
         <div class="due"><span>Da incassare</span><b id="tDue">€0</b></div>
+        <div><span>Costo campo</span><b id="tCosto">€0</b><small id="tOre"></small></div>
+        <div class="margine"><span>Margine</span><b id="tMarg">€0</b><small id="tMargPrev"></small></div>
       </div>
+      <h3 id="meseTit">Mese</h3>
+      <div class="totals" id="meseBox">
+        <div><span>Serate</span><b id="mSerate">0</b><small id="mOre"></small></div>
+        <div class="paid"><span>Incassato</span><b id="mPaid">€0</b><small id="mDue"></small></div>
+        <div><span>Costo campo</span><b id="mCosto">€0</b></div>
+        <div class="margine"><span>Margine</span><b id="mMarg">€0</b><small id="mMargPrev"></small></div>
+      </div>
+      <p class="hint">Il campo costa €<span id="costoOra">24</span> l'ora alla struttura: si conta ogni turno con almeno un iscritto, le serate annullate non costano. Margine = incassato − costo campo. Il mese somma le serate già caricate (ultime 12 e prossime 4).</p>
       <p class="hint">Nei turni qui sopra ora puoi segnare chi ha pagato, togliere o aggiungere persone senza limite di posti.</p>
       <div class="row"><a class="btn" href="?atleta">Vedi come atleta</a><button class="btn" id="toggleDate">Annulla questa serata</button></div>
       <h3>Ragazzi fissi</h3>
@@ -131,8 +141,8 @@
     </div>
   </section>
 </div>
-<script src="config.js?v=35"></script>
-<script src="core.js?v=35"></script>
-<script src="app.js?v=35"></script>
+<script src="config.js?v=36"></script>
+<script src="core.js?v=36"></script>
+<script src="app.js?v=36"></script>
 </body>
 </html>

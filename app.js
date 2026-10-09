@@ -25,6 +25,25 @@
   var METODI = { satispay: 'Satispay', contanti: 'Contanti', bonifico: 'Bonifico' };
   var METODI_ADMIN = { satispay: 'Satispay', contanti: 'Contanti', bonifico: 'Bonifico', prova: 'Prova gratuita' };
   function myName() { return fvClean($('nome').value); }
+  var COSTO_ORA = typeof window.FV_COSTO_ORA === 'number' ? window.FV_COSTO_ORA : 24;
+  // Conti di una serata (solo istruttore): incassi come nei turni, costo = ore con almeno un iscritto
+  function conti(s) {
+    var c = { ore: 0, previsto: 0, incassato: 0, costo: 0 };
+    if (!s || !s.turni || s.annullata) return c;
+    FV_TURNI.forEach(function (T) {
+      var t = s.turni[T.k]; if (!t) return;
+      if (t.count > 0) c.ore++;
+      t.people.forEach(function (p) {
+        var prezzo = p.prezzo != null ? p.prezzo : s.config.prezzo;
+        if ((p.pagato && p.metodo === 'prova') || p.gratis) return;
+        c.previsto += prezzo; if (p.pagato) c.incassato += prezzo;
+      });
+    });
+    c.costo = c.ore * COSTO_ORA;
+    return c;
+  }
+  function conSegno(v) { return (v > 0 ? '+' : v < 0 ? '−' : '') + eur(Math.abs(v)); }
+  function segno(b, v) { b.textContent = conSegno(v); b.className = v < 0 ? 'neg' : v > 0 ? 'pos' : ''; }
 
   var PRIMA_SERATA = '2026-10-07'; // prima serata con le prenotazioni online: prima non si mostra nulla
   // Prossimi 4 mercoledì (oggi incluso fino alle 21), più `back` mercoledì passati
@@ -76,7 +95,7 @@
   function chiedi(d) {
     if (!inCorso[d]) {
       inCorso[d] = api({ action: 'state', date: d, nome: myName() })
-        .then(function (s) { cacheSerate[d] = s; delete inCorso[d]; return s; },
+        .then(function (s) { cacheSerate[d] = s; delete inCorso[d]; if (state && state.admin && curDate) renderMese(); return s; },
               function (e) { delete inCorso[d]; throw e; });
     }
     return inCorso[d];
@@ -335,9 +354,36 @@
       $('tPaid').textContent = eur(incassato);
       $('tMetodi').textContent = Object.keys(METODI).map(function (m) { return METODI[m] + ' ' + eur(perMetodo[m]); }).join(' · ');
       $('tDue').textContent = eur(previsto - incassato);
+      var cs = conti(state);
+      $('tCosto').textContent = eur(cs.costo);
+      $('tOre').textContent = state.annullata ? 'serata annullata' : cs.ore + (cs.ore === 1 ? ' ora' : ' ore') + ' × ' + eur(COSTO_ORA);
+      segno($('tMarg'), incassato - cs.costo);
+      $('tMargPrev').textContent = 'se pagano tutti: ' + conSegno(previsto - cs.costo);
+      renderMese();
       $('toggleDate').textContent = state.annullata ? 'Riattiva questa serata' : 'Annulla questa serata';
       renderFissi();
     }
+  }
+
+  // Riepilogo del mese della serata scelta, sulle serate già caricate
+  function renderMese() {
+    var mese = curDate.slice(0, 7), m = { serate: 0, ore: 0, costo: 0, previsto: 0, incassato: 0 }, mancano = 0;
+    wednesdays(12).forEach(function (d) {
+      if (d.slice(0, 7) !== mese) return;
+      var s = cacheSerate[d]; if (!s) { mancano++; return; }
+      var c = conti(s); if (!c.ore) return;
+      m.serate++; m.ore += c.ore; m.costo += c.costo; m.previsto += c.previsto; m.incassato += c.incassato;
+    });
+    var nome = dateLabel(mese + '-15', { month: 'long', year: 'numeric' });
+    $('meseTit').textContent = nome.charAt(0).toUpperCase() + nome.slice(1) + (mancano ? ' · caricamento…' : '');
+    $('costoOra').textContent = COSTO_ORA;
+    $('mSerate').textContent = m.serate;
+    $('mOre').textContent = m.ore + (m.ore === 1 ? ' ora' : ' ore') + ' di campo';
+    $('mPaid').textContent = eur(m.incassato);
+    $('mDue').textContent = 'da incassare ' + eur(m.previsto - m.incassato);
+    $('mCosto').textContent = eur(m.costo);
+    segno($('mMarg'), m.incassato - m.costo);
+    $('mMargPrev').textContent = 'se pagano tutti: ' + conSegno(m.previsto - m.costo);
   }
 
   function renderFissi() {

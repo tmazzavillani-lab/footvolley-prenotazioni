@@ -85,12 +85,15 @@ ul.people{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;
 #login input{max-width:200px}
 .note{font-size:.88rem;color:var(--ok)}
 .note.err{color:var(--warn)}
-.totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .totals div{background:var(--surface);padding:10px 12px;display:flex;flex-direction:column;gap:2px}
 .totals span{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
 .totals b{font-family:var(--f-display);font-size:1.6rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
 .totals .paid b{color:var(--ok)}
 .totals .due b{color:var(--warn)}
+.totals .margine b.neg{color:var(--warn)}
+.totals .margine b.pos{color:var(--ok)}
+#meseBox{margin-top:8px}
 .fissi{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .fissi .col{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
