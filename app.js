@@ -236,7 +236,7 @@
       var ul = el('ul', 'people'), inList = false, mioRiservato = false;
       t.people.forEach(function (p) {
         var nomeMio = !!me && fvNorm(p.nome) === fvNorm(me), isMe = p.mine || nomeMio;
-        // il pulsante del turno segue il nome scritto in alto (dallo stesso dispositivo si può prenotare anche per un amico)
+        // il pulsante del turno segue il nome scritto in alto (si può prenotare solo per il proprio nome verificato)
         if (nomeMio && p.riservato) mioRiservato = true; else if (nomeMio) inList = true;
         var prezzo = p.prezzo != null ? p.prezzo : cfg.prezzo, free = !!p.gratis;
         if (admin && !tAnn) {

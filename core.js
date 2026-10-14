@@ -281,8 +281,8 @@ function fvRoute(p, st, nowStr) {
     var row = st.list('P').filter(function (r) { return r.id === p.id && r.data === d; })[0];
     if (!row) throw new Error('Prenotazione non trovata');
     if (!admin) {
-      // dal dispositivo della prenotazione, o da quello con cui ha verificato il nome
-      if (!token || (row.token !== token && !fvVerificato(st, row.nome, token))) throw new Error('Puoi annullare solo le tue prenotazioni: verifica il tuo nome con l’email (in alto)');
+      // ogni azione dell'atleta è legata al nome verificato con la sua email
+      if (!fvVerificato(st, row.nome, token)) throw new Error('Puoi annullare solo le tue prenotazioni: verifica il tuo nome con l’email (in alto)');
       if (fvStarted(d, row.turno, nowStr)) throw new Error('Il turno è già iniziato');
     }
     st.removeWhere('P', function (r) { return r.id === row.id; });
@@ -325,9 +325,8 @@ function fvRoute(p, st, nowStr) {
     var who = trova(nome);
     if (!who) throw new Error(nome + ' non è in questo turno');
     if (who.pagato) throw new Error('Pagamento già verificato dall’istruttore');
-    // dal dispositivo della prenotazione, o da quello con cui ha verificato il nome
-    var suo = who.id && token && (st.list('P').some(function (r) { return r.id === who.id && r.token === token; }) || fvVerificato(st, who.nome, token));
-    if (!admin && !suo) throw new Error('Puoi segnare il pagamento solo dal dispositivo con cui ti sei prenotato');
+    // ogni azione dell'atleta è legata al nome verificato con la sua email
+    if (!admin && !(who.id && fvVerificato(st, who.nome, token))) throw new Error('Puoi segnare solo il tuo pagamento: verifica il tuo nome con l’email (in alto)');
     st.removeWhere('D', match);
     if (!p.undo) {
       if (FV_METODI.indexOf(p.metodo) < 0 || (p.metodo === 'prova' && !admin)) throw new Error('Scegli come hai pagato');
