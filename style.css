@@ -49,6 +49,7 @@ input[type=text],input[type=number],input[type=password],input[type=url],input[t
 .turno.annullato{opacity:.75;border-style:dashed}
 .turno .tann{margin:0;background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:8px 10px;font-size:.88rem;font-weight:600}
 .turno .tbtn{align-self:flex-start}
+.btn.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
 .turno{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .thead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .thead h3{font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums}

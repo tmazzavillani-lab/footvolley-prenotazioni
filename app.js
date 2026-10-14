@@ -231,6 +231,10 @@
       var bar = el('div', 'cap');
       for (var i = 0; i < Math.max(cap, n); i++) { var c = el('i'); if (i < n) c.className = t.people[i].fisso ? 'f' : 'x'; bar.append(c); }
       card.append(bar);
+      if (admin) card.append(btn('btn small tbtn' + (tAnn ? '' : ' warn'), tAnn ? '↺ Riattiva il turno ' + T.l : '✕ Annulla il turno ' + T.l, function () {
+        if (!tAnn && !confirm('Annullare il turno ' + T.l + ' di questa serata? Non si conta il campo e non si incassa.')) return;
+        act({ action: 'toggleTurno', turno: T.k, annullato: !tAnn }, tAnn ? 'Turno ' + T.l + ' riattivato' : 'Turno ' + T.l + ' annullato');
+      }));
       if (tAnn) card.append(el('p', 'tann', admin ? 'Turno annullato: non si paga il campo e non si incassa' : 'Turno annullato'));
 
       var ul = el('ul', 'people'), inList = false, mioRiservato = false;
@@ -324,10 +328,6 @@
       });
 
       if (admin) {
-        card.append(btn('link back tbtn', tAnn ? 'Riattiva il turno ' + T.l : 'Annulla il turno ' + T.l, function () {
-          if (!tAnn && !confirm('Annullare il turno ' + T.l + ' di questa serata? Non si conta il campo e non si incassa.')) return;
-          act({ action: 'toggleTurno', turno: T.k, annullato: !tAnn }, tAnn ? 'Turno ' + T.l + ' riattivato' : 'Turno ' + T.l + ' annullato');
-        }));
         var f = el('form', 'add'), inp = el('input'); inp.type = 'text'; inp.placeholder = 'Aggiungi un nome'; inp.id = 'add-' + T.k; inp.maxLength = 40;
         var sb = el('button', 'btn', 'Aggiungi'); sb.type = 'submit';
         var pl = el('label', 'prova'), pc = el('input'); pc.type = 'checkbox'; pc.id = 'prova-' + T.k; pl.append(pc, ' prova gratuita');
