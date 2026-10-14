@@ -10,6 +10,7 @@ function fvTurno(k) { return FV_TURNI.filter(function (t) { return t.k === k; })
 function fvStarted(d, k, nowStr) { return nowStr >= d + ' ' + fvTurno(k).h + ':00'; }
 var FV_INIZIO = '2026-10-01'; // fissi inseriti prima dello storico contano da questa data
 function fvIsDay(d) { return /^\d{4}-\d{2}-\d{2}$/.test(String(d || '')); }
+function fvTurnoAnnullato(cfg, d, k) { return (cfg.turniAnnullati || []).indexOf(d + '|' + k) >= 0; }
 function fvId() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
 
 function fvFixConfig(c) {
@@ -22,7 +23,9 @@ function fvFixConfig(c) {
     satispay: /^https:\/\/[^\s<>\x22\x27]+$/.test(String(c.satispay || '').trim()) ? String(c.satispay).trim().slice(0, 300) : '',
     speciali: {},
     postiTurno: {},
-    saldati: {}
+    saldati: {},
+    // singoli turni annullati: ['2026-10-14|t17', ...]
+    turniAnnullati: Array.isArray(c.turniAnnullati) ? c.turniAnnullati.filter(function (x) { var p = String(x).split('|'); return fvIsWed(p[0]) && !!fvTurno(p[1]); }) : []
   };
   // mesi già saldati alla struttura: { '2026-10': { il: '2026-10-31', importo: 72 } }
   var sl = c.saldati && typeof c.saldati === 'object' ? c.saldati : {};
@@ -122,7 +125,7 @@ function fvState(cfg, st, d, token, admin, nowStr) {
       // i pagamenti di una persona li vedono solo lei e l'istruttore
       if (!(admin || x.mine)) { delete x.pagato; delete x.dichiarato; delete x.metodo; delete x.gratis; delete x.prezzo; delete x.sconto; }
     });
-    turni[k] = { posti: fvPosti(cfg, k), people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length };
+    turni[k] = { posti: fvPosti(cfg, k), people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length, annullato: fvTurnoAnnullato(cfg, d, k) };
   });
   var res = {
     date: d, annullata: cfg.annullate.indexOf(d) >= 0, admin: admin, turni: turni, scaduta: scaduta, oraConferma: FV_ORA_CONFERMA,
@@ -145,7 +148,7 @@ function fvDaSaldare(cfg, st, nome, nowStr) {
   var same = function (x) { return function (r) { return r.data === x.data && r.turno === x.turno && fvNorm(r.nome) === fvNorm(x.nome); }; };
   st.list('P').forEach(function (x) {
     if (fvNorm(x.nome) !== fvNorm(nome) || !fvIsWed(x.data) || x.data < FV_INIZIO || cfg.annullate.indexOf(x.data) >= 0) return;
-    if (!fvTurno(x.turno) || !fvStarted(x.data, x.turno, nowStr) || G.some(same(x))) return;
+    if (!fvTurno(x.turno) || fvTurnoAnnullato(cfg, x.data, x.turno) || !fvStarted(x.data, x.turno, nowStr) || G.some(same(x))) return;
     var sc = S.filter(same(x))[0], pz = sc && sc.prezzo !== '' && Number(sc.prezzo) >= 0 ? Number(sc.prezzo) : fvPrezzo(cfg, nome);
     if (!pz) return;
     var dd = D.filter(same(x))[0];
@@ -233,7 +236,7 @@ function fvRoute(p, st, nowStr) {
     if (!admin) throw new Error('Serve il PIN istruttore');
     var oggi = nowStr.slice(0, 10), nf = {}, pf = p.fissi || {};
     FV_TURNI.forEach(function (t) { nf[t.k] = fvAggiornaFissi(cfg.fissi[t.k], pf[t.k], oggi); });
-    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay, speciali: p.speciali, postiTurno: p.postiTurno, saldati: cfg.saldati });
+    var nc = fvFixConfig({ prezzo: Number(p.prezzo), posti: Number(p.posti), fissi: nf, annullate: cfg.annullate, satispay: p.satispay, speciali: p.speciali, postiTurno: p.postiTurno, saldati: cfg.saldati, turniAnnullati: cfg.turniAnnullati });
     if (p.satispay && !nc.satispay) throw new Error('Il link Satispay deve iniziare con https://');
     st.setConfig(nc);
     return { config: fvPublicConfig(nc) };
@@ -262,6 +265,7 @@ function fvRoute(p, st, nowStr) {
     if (!nome) throw new Error('Scrivi il tuo nome');
     if (!admin) {
       if (annullata) throw new Error('Allenamento annullato');
+      if (fvTurnoAnnullato(cfg, d, k)) throw new Error('Turno annullato');
       if (fvStarted(d, k, nowStr)) throw new Error('Il turno è già iniziato');
     }
     var gia = trova(nome);
@@ -277,7 +281,8 @@ function fvRoute(p, st, nowStr) {
     var row = st.list('P').filter(function (r) { return r.id === p.id && r.data === d; })[0];
     if (!row) throw new Error('Prenotazione non trovata');
     if (!admin) {
-      if (!token || row.token !== token) throw new Error('Puoi annullare solo le prenotazioni fatte da questo dispositivo');
+      // dal dispositivo della prenotazione, o da quello con cui ha verificato il nome
+      if (!token || (row.token !== token && !fvVerificato(st, row.nome, token))) throw new Error('Puoi annullare solo le tue prenotazioni: verifica il tuo nome con l’email (in alto)');
       if (fvStarted(d, row.turno, nowStr)) throw new Error('Il turno è già iniziato');
     }
     st.removeWhere('P', function (r) { return r.id === row.id; });
@@ -288,8 +293,12 @@ function fvRoute(p, st, nowStr) {
     // un fisso che annulla da solo libera il suo posto per quella sera
     if (!admin && fvHas(fvFissiAl(cfg, row.turno, d), row.nome)) st.add('A', { data: d, turno: row.turno, nome: row.nome });
   } else if (a === 'absent') {
-    if (!admin) throw new Error('Serve il PIN istruttore');
     if (!isFisso) throw new Error(nome + ' non è fisso in questo turno');
+    // il fisso può segnarsi assente da solo, in qualsiasi momento prima del turno, se ha verificato il nome
+    if (!admin) {
+      if (!fvVerificato(st, nome, token)) throw new Error('Prima verifica il tuo nome con l’email (in alto)');
+      if (fvStarted(d, k, nowStr)) throw new Error('Il turno è già iniziato');
+    }
     st.removeWhere('P', match);
     st.removeWhere('A', match);
     st.add('A', { data: d, turno: k, nome: nome });
@@ -324,6 +333,13 @@ function fvRoute(p, st, nowStr) {
       if (FV_METODI.indexOf(p.metodo) < 0 || (p.metodo === 'prova' && !admin)) throw new Error('Scegli come hai pagato');
       st.add('D', { data: d, turno: k, nome: who.nome, metodo: p.metodo, creato: nowStr });
     }
+  } else if (a === 'toggleTurno') {
+    // annulla (o riattiva) un solo turno della serata: non si paga il campo e non si incassa
+    if (!admin) throw new Error('Serve il PIN istruttore');
+    if (!fvTurno(k)) throw new Error('Turno non valido');
+    cfg.turniAnnullati = cfg.turniAnnullati.filter(function (x) { return x !== d + '|' + k; });
+    if (p.annullato) cfg.turniAnnullati.push(d + '|' + k);
+    st.setConfig(cfg);
   } else if (a === 'toggleDate') {
     if (!admin) throw new Error('Serve il PIN istruttore');
     cfg.annullate = cfg.annullate.filter(function (x) { return x !== d; });

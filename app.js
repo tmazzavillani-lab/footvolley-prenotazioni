@@ -31,7 +31,7 @@
     var c = { ore: 0, previsto: 0, incassato: 0, costo: 0 };
     if (!s || !s.turni || s.annullata) return c;
     FV_TURNI.forEach(function (T) {
-      var t = s.turni[T.k]; if (!t) return;
+      var t = s.turni[T.k]; if (!t || t.annullato) return;
       if (t.count > 0) c.ore++;
       t.people.forEach(function (p) {
         var prezzo = p.prezzo != null ? p.prezzo : s.config.prezzo;
@@ -155,6 +155,8 @@
     } else if (p.action === 'declare') {
       var d = trova(t.people, p.nome);
       if (d) { d.dichiarato = !p.undo; d.metodo = p.undo ? '' : p.metodo; }
+    } else if (p.action === 'toggleTurno') {
+      t.annullato = !!p.annullato;
     } else if (p.action === 'sconto') {
       var sc = trova(t.people, p.nome);
       if (sc && p.prezzo !== '') { sc.prezzo = p.prezzo; sc.sconto = true; sc.gratis = p.prezzo === 0; }
@@ -221,13 +223,15 @@
     FV_TURNI.forEach(function (T) {
       var t = state.turni[T.k], n = t.count, cap = t.posti || cfg.posti, started = fvStarted(curDate, T.k, now);
       tot += n;
-      var card = el('article', 'turno');
+      var tAnn = !!t.annullato;
+      var card = el('article', 'turno' + (tAnn ? ' annullato' : ''));
       var head = el('div', 'thead');
       head.append(el('h3', null, T.l), el('span', 'count' + (n > cap ? ' over' : n === cap ? ' full' : ''), n + '/' + cap + (n >= cap ? ' · pieno' : '')));
       card.append(head);
       var bar = el('div', 'cap');
       for (var i = 0; i < Math.max(cap, n); i++) { var c = el('i'); if (i < n) c.className = t.people[i].fisso ? 'f' : 'x'; bar.append(c); }
       card.append(bar);
+      if (tAnn) card.append(el('p', 'tann', admin ? 'Turno annullato: non si paga il campo e non si incassa' : 'Turno annullato'));
 
       var ul = el('ul', 'people'), inList = false, mioRiservato = false;
       t.people.forEach(function (p) {
@@ -235,7 +239,7 @@
         // il pulsante del turno segue il nome scritto in alto (dallo stesso dispositivo si può prenotare anche per un amico)
         if (nomeMio && p.riservato) mioRiservato = true; else if (nomeMio) inList = true;
         var prezzo = p.prezzo != null ? p.prezzo : cfg.prezzo, free = !!p.gratis;
-        if (admin) {
+        if (admin && !tAnn) {
           if (p.pagato && p.metodo === 'prova') prove++;
           else if (free) gratis++;
           else {
@@ -287,7 +291,7 @@
           else if (p.dichiarato) {
             li.append(el('span', 'paid wait', 'Pagato con ' + (METODI[p.metodo] || '?') + ' · in attesa di conferma'));
             if (mio) li.append(btn('link back', 'Correggi', function () { act({ action: 'declare', turno: T.k, nome: p.nome, undo: true }, 'Ok, puoi scegliere di nuovo il metodo'); }, 'Hai sbagliato metodo? Toglilo e riscegli'));
-          } else if (mio && !state.annullata) {
+          } else if (mio && !state.annullata && !tAnn) {
             li.append(el('span', 'paid no', 'Da pagare' + (prezzo !== cfg.prezzo ? ' ' + eur(prezzo) : '')));
             var ask = el('span', 'payask'); ask.append(el('span', null, 'Ho pagato con:'));
             Object.keys(METODI).forEach(function (m) {
@@ -296,8 +300,12 @@
             li.append(ask);
           }
         }
-        if (!admin && !started && !state.annullata) {
-          if (p.mine) li.append(btn('link', p.fisso ? 'Non vengo' : 'Annulla', function () { act({ action: 'cancel', id: p.id }, p.fisso ? 'Ok, il tuo posto si è liberato per questa sera' : 'Prenotazione annullata'); }));
+        if (!admin && !started && !state.annullata && !tAnn) {
+          if (p.riservato && nomeMio) li.append(btn('link', 'Non vengo', function () {
+            if (state.io && fvNorm(state.io.nome) === fvNorm(p.nome) && !state.io.verificato) { toast('Prima verifica il tuo nome con l’email, qui in alto', true); $('verEmail').focus(); return; }
+            act({ action: 'absent', turno: T.k, nome: p.nome }, 'Ok, il tuo posto si è liberato per questa sera');
+          }));
+          if (p.mine || (nomeMio && !p.riservato && p.id)) li.append(btn('link', p.fisso ? 'Non vengo' : 'Annulla', function () { act({ action: 'cancel', id: p.id }, p.fisso ? 'Ok, il tuo posto si è liberato per questa sera' : 'Prenotazione annullata'); }));
         }
         ul.append(li);
       });
@@ -316,6 +324,10 @@
       });
 
       if (admin) {
+        card.append(btn('link back tbtn', tAnn ? 'Riattiva il turno ' + T.l : 'Annulla il turno ' + T.l, function () {
+          if (!tAnn && !confirm('Annullare il turno ' + T.l + ' di questa serata? Non si conta il campo e non si incassa.')) return;
+          act({ action: 'toggleTurno', turno: T.k, annullato: !tAnn }, tAnn ? 'Turno ' + T.l + ' riattivato' : 'Turno ' + T.l + ' annullato');
+        }));
         var f = el('form', 'add'), inp = el('input'); inp.type = 'text'; inp.placeholder = 'Aggiungi un nome'; inp.id = 'add-' + T.k; inp.maxLength = 40;
         var sb = el('button', 'btn', 'Aggiungi'); sb.type = 'submit';
         var pl = el('label', 'prova'), pc = el('input'); pc.type = 'checkbox'; pc.id = 'prova-' + T.k; pl.append(pc, ' prova gratuita');
@@ -329,6 +341,7 @@
       } else {
         var label = 'Prenota ' + T.l, dis = false;
         if (state.annullata) { label = 'Annullato'; dis = true; }
+        else if (tAnn) { label = 'Turno annullato'; dis = true; }
         else if (started) { label = 'Turno già iniziato'; dis = true; }
         else if (inList) { label = 'Sei in lista'; dis = true; }
         else if (mioRiservato) { label = 'Conferma il tuo posto'; }
@@ -343,7 +356,7 @@
         });
         b.disabled = dis;
         card.append(b);
-        if (inList && cfg.satispay && !state.annullata) {
+        if (inList && cfg.satispay && !state.annullata && !tAnn) {
           var sp = el('a', 'btn pay-sp', 'Paga ' + eur(cfg.prezzo) + ' con Satispay');
           sp.href = cfg.satispay; sp.target = '_blank'; sp.rel = 'noopener';
           card.append(sp);
@@ -440,7 +453,7 @@
       var k = d.slice(0, 7);
       if (!mesi[k]) { mesi[k] = { ore: 0, futuro: 0 }; ordine.push(k); }
       FV_TURNI.forEach(function (T) {
-        var t = s.turni[T.k]; if (!t || !t.count) return;
+        var t = s.turni[T.k]; if (!t || !t.count || t.annullato) return;
         if (fvStarted(d, T.k, now)) mesi[k].ore++; else mesi[k].futuro++;
       });
     });
