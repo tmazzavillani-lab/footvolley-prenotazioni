@@ -111,6 +111,8 @@
       if (d !== curDate) return;
       state = s;
       $('turni').classList.remove('attesa');
+      // con il PIN servono anche le serate passate (riepiloghi del mese e della struttura): caricale subito
+      if (s.admin && !adminCfg) setTimeout(precarica, 0);
       if (s.admin && !adminCfg) adminCfg = JSON.parse(JSON.stringify({ prezzo: s.config.prezzo, posti: s.config.posti, fissi: s.config.fissi, satispay: s.config.satispay || '', speciali: s.config.speciali || {}, postiTurno: s.config.postiTurno || {} }));
       render();
     }).catch(function (e) {
