@@ -102,6 +102,12 @@ function migraTurni202611() {
         else { sh.getRange(i + 2, col).setValue('t19'); gia[chiave(r, 't19')] = true; spostate++; }
       }
     });
+    // 28/10 come si è giocato davvero: Zalambani assente nel 18–19:30, Kukaj presente nel 19:30–21
+    var d28 = '2026-10-28', st = FvSheetStore;
+    var e = function (t, n) { return function (r) { return r.data === d28 && r.turno === t && fvNorm(r.nome) === fvNorm(n); }; };
+    st.removeWhere('P', e('t18', 'Emanuele Zalambani'));
+    if (!st.list('A').some(e('t18', 'Emanuele Zalambani'))) st.add('A', { data: d28, turno: 't18', nome: 'Emanuele Zalambani' });
+    if (!st.list('P').some(e('t19', 'Majkel Kukaj'))) st.add('P', { id: fvId(), data: d28, turno: 't19', nome: 'Majkel Kukaj', token: '', creato: d28 + ' 19:30' });
     var cfg = fvFixConfig(FvSheetStore.getConfig()), nuovi = {
       t17: ['Filippo Faccani', 'Nicola Drei', 'Tomaso Mazzavillani'],
       t18: ['Emanuele Zalambani', 'Iuri focaccia', 'Cristiano Diotti', 'Matteo Mancini'],
