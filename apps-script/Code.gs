@@ -3,10 +3,10 @@
 // Se la modifichi, rigenera apps-script/Code.gs con: sh build-gs.sh
 // Tutte le chiavi di turno usate nel tempo (fissi e posti sono salvati per chiave)
 var FV_TURNI = [{ k: 't17', h: '17:00', l: '17–18', ore: 1, p: 4 }, { k: 't18', h: '18:00', l: '18–19', ore: 1 }, { k: 't19', h: '19:00', l: '19–20', ore: 1 }, { k: 't20', h: '20:00', l: '20–21', ore: 1 }];
-// Orari per periodo (il più recente per primo): dal 28/10/2026 tre turni, 17–18 e due da un'ora e mezza
+// Orari per periodo (il più recente per primo): dal 28/10/2026 tre turni, 17–18 e due da un'ora e mezza (€20; senza prezzo = prezzo base)
 var FV_ORARI = [
-  { dal: '2026-10-28', turni: [{ k: 't17', h: '17:00', l: '17–18', ore: 1, p: 4 }, { k: 't18', h: '18:00', l: '18–19:30', ore: 1.5 }, { k: 't19', h: '19:30', l: '19:30–21', ore: 1.5 }] },
-  { dal: '', turni: FV_TURNI }
+  { dal: '2026-10-28', turni: [{ k: 't17', h: '17:00', l: '17–18', ore: 1, p: 4 }, { k: 't18', h: '18:00', l: '18–19:30', ore: 1.5, prezzo: 20 }, { k: 't19', h: '19:30', l: '19:30–21', ore: 1.5, prezzo: 20 }] },
+  { dal: '', turni: FV_TURNI } // fino al 21/10: quattro turni da un'ora
 ];
 function fvTurniDi(d) { for (var i = 0; i < FV_ORARI.length; i++) if (!FV_ORARI[i].dal || String(d) >= FV_ORARI[i].dal) return FV_ORARI[i].turni; return FV_TURNI; }
 function fvTurnoDi(d, k) { return fvTurniDi(d).filter(function (t) { return t.k === k; })[0]; }
@@ -80,9 +80,11 @@ function fvPosti(cfg, k) {
   var T = fvTurno(k);
   return (cfg.postiTurno && cfg.postiTurno[k]) || (T && T.p) || cfg.posti;
 }
-function fvPrezzo(cfg, nome) {
+function fvPrezzoBase(cfg, d, k) { var T = fvTurnoDi(d, k); return T && T.prezzo != null ? T.prezzo : cfg.prezzo; }
+// prezzo concordato della persona, altrimenti il prezzo del turno
+function fvPrezzo(cfg, nome, base) {
   var k = Object.keys(cfg.speciali).filter(function (n) { return fvNorm(n) === fvNorm(nome); })[0];
-  return k != null ? cfg.speciali[k] : cfg.prezzo;
+  return k != null ? cfg.speciali[k] : (base != null ? base : cfg.prezzo);
 }
 // Applica la nuova lista di fissi (nomi) allo storico: nuovi da oggi, tolti fino a oggi
 function fvAggiornaFissi(storico, nomi, oggi) {
@@ -123,7 +125,7 @@ function fvState(cfg, st, d, token, admin, nowStr) {
     }));
     people.forEach(function (x) {
       var same = function (r) { return r.turno === k && fvNorm(r.nome) === fvNorm(x.nome); };
-      var g = G.filter(same)[0], dd = D.filter(same)[0], sc = S.filter(same)[0], pz = fvPrezzo(cfg, x.nome);
+      var g = G.filter(same)[0], dd = D.filter(same)[0], sc = S.filter(same)[0], pz = fvPrezzo(cfg, x.nome, fvPrezzoBase(cfg, d, k));
       // sconto della singola serata: prevale sul prezzo normale/concordato
       if (sc && sc.prezzo !== '' && Number(sc.prezzo) >= 0) { pz = Number(sc.prezzo); x.sconto = true; }
       x.pagato = !!g;
@@ -134,7 +136,7 @@ function fvState(cfg, st, d, token, admin, nowStr) {
       // i pagamenti di una persona li vedono solo lei e l'istruttore
       if (!(admin || x.mine)) { delete x.pagato; delete x.dichiarato; delete x.metodo; delete x.gratis; delete x.prezzo; delete x.sconto; }
     });
-    turni[k] = { posti: fvPosti(cfg, k), people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length, annullato: fvTurnoAnnullato(cfg, d, k) };
+    turni[k] = { posti: fvPosti(cfg, k), people: people, assenti: fx.filter(function (n) { return fvHas(ass, n); }), nonConfermati: nonConf, count: people.length, prezzo: fvPrezzoBase(cfg, d, k), annullato: fvTurnoAnnullato(cfg, d, k) };
   });
   var res = {
     date: d, annullata: cfg.annullate.indexOf(d) >= 0, admin: admin, turni: turni, scaduta: scaduta, oraConferma: FV_ORA_CONFERMA,
@@ -158,7 +160,7 @@ function fvDaSaldare(cfg, st, nome, nowStr) {
   st.list('P').forEach(function (x) {
     if (fvNorm(x.nome) !== fvNorm(nome) || !fvIsWed(x.data) || x.data < FV_INIZIO || cfg.annullate.indexOf(x.data) >= 0) return;
     if (!fvTurnoDi(x.data, x.turno) || fvTurnoAnnullato(cfg, x.data, x.turno) || !fvStarted(x.data, x.turno, nowStr) || G.some(same(x))) return;
-    var sc = S.filter(same(x))[0], pz = sc && sc.prezzo !== '' && Number(sc.prezzo) >= 0 ? Number(sc.prezzo) : fvPrezzo(cfg, nome);
+    var sc = S.filter(same(x))[0], pz = sc && sc.prezzo !== '' && Number(sc.prezzo) >= 0 ? Number(sc.prezzo) : fvPrezzo(cfg, nome, fvPrezzoBase(cfg, x.data, x.turno));
     if (!pz) return;
     var dd = D.filter(same(x))[0];
     out.push({ data: x.data, turno: x.turno, prezzo: pz, dichiarato: !!dd, metodo: dd ? dd.metodo || '' : '' });

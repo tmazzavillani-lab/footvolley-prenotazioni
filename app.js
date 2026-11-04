@@ -35,7 +35,7 @@
       var t = s.turni[T.k]; if (!t || t.annullato) return;
       if (t.count > 0) c.ore += T.ore;
       t.people.forEach(function (p) {
-        var prezzo = p.prezzo != null ? p.prezzo : s.config.prezzo;
+        var prezzo = p.prezzo != null ? p.prezzo : (t.prezzo != null ? t.prezzo : s.config.prezzo);
         if ((p.pagato && p.metodo === 'prova') || p.gratis) return;
         c.previsto += prezzo; if (p.pagato) c.incassato += prezzo;
       });
@@ -199,7 +199,10 @@
       renderDates();
     }
     var admin = state.admin, cfg = state.config, me = myName(), now = nowRome();
-    $('subline').textContent = fvTurniDi(curDate).map(function (T) { return T.l; }).join(' · ') + ' · ' + eur(cfg.prezzo) + ' a persona';
+    var prezzi = {}; fvTurniDi(curDate).forEach(function (T) { var t = state.turni[T.k], v = t && t.prezzo != null ? t.prezzo : cfg.prezzo; (prezzi[v] = prezzi[v] || []).push(T.ore); });
+    var pk = Object.keys(prezzi);
+    $('subline').textContent = fvTurniDi(curDate).map(function (T) { return T.l; }).join(' · ') + ' · ' + (pk.length === 1 ? eur(Number(pk[0])) + ' a persona'
+      : pk.map(function (v) { var o = prezzi[v][0]; return eur(Number(v)) + (o === 1 ? ' un’ora' : o === 1.5 ? ' un’ora e mezza' : ' ' + oreTxt(o)); }).join(' · '));
     var io = state.io, ver = $('verifica');
     ver.hidden = admin || !io || !me || fvNorm(io.nome) !== fvNorm(me);
     if (!ver.hidden) {
@@ -214,7 +217,7 @@
     $('annullata').hidden = !state.annullata;
     var pay = $('payBar');
     pay.hidden = !cfg.satispay || state.annullata;
-    if (cfg.satispay) { pay.href = cfg.satispay; pay.textContent = 'Paga ' + eur(cfg.prezzo) + ' con Satispay'; }
+    if (cfg.satispay) { pay.href = cfg.satispay; pay.textContent = 'Paga con Satispay'; }
     var keep = {}, foc = document.activeElement && document.activeElement.id;
     var TURNI = fvTurniDi(curDate);
     TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x) keep[T.k] = x.value; });
@@ -244,7 +247,7 @@
         var nomeMio = !!me && fvNorm(p.nome) === fvNorm(me), isMe = p.mine || nomeMio;
         // il pulsante del turno segue il nome scritto in alto (si può prenotare solo per il proprio nome verificato)
         if (nomeMio && p.riservato) mioRiservato = true; else if (nomeMio) inList = true;
-        var prezzo = p.prezzo != null ? p.prezzo : cfg.prezzo, free = !!p.gratis;
+        var base = t.prezzo != null ? t.prezzo : cfg.prezzo, prezzo = p.prezzo != null ? p.prezzo : base, free = !!p.gratis;
         if (admin && !tAnn) {
           if (p.pagato && p.metodo === 'prova') prove++;
           else if (free) gratis++;
@@ -298,7 +301,7 @@
             li.append(el('span', 'paid wait', 'Pagato con ' + (METODI[p.metodo] || '?') + ' · in attesa di conferma'));
             if (mio) li.append(btn('link back', 'Correggi', function () { act({ action: 'declare', turno: T.k, nome: p.nome, undo: true }, 'Ok, puoi scegliere di nuovo il metodo'); }, 'Hai sbagliato metodo? Toglilo e riscegli'));
           } else if (mio && !state.annullata && !tAnn) {
-            li.append(el('span', 'paid no', 'Da pagare' + (prezzo !== cfg.prezzo ? ' ' + eur(prezzo) : '')));
+            li.append(el('span', 'paid no', 'Da pagare ' + eur(prezzo)));
             var ask = el('span', 'payask'); ask.append(el('span', null, 'Ho pagato con:'));
             Object.keys(METODI).forEach(function (m) {
               ask.append(btn('pay', METODI[m], function () { act({ action: 'declare', turno: T.k, nome: p.nome, metodo: m }, 'Grazie! L’istruttore verificherà il pagamento'); }));
@@ -359,7 +362,7 @@
         b.disabled = dis;
         card.append(b);
         if (inList && cfg.satispay && !state.annullata && !tAnn) {
-          var sp = el('a', 'btn pay-sp', 'Paga ' + eur(cfg.prezzo) + ' con Satispay');
+          var sp = el('a', 'btn pay-sp', 'Paga ' + eur(t.prezzo != null ? t.prezzo : cfg.prezzo) + ' con Satispay');
           sp.href = cfg.satispay; sp.target = '_blank'; sp.rel = 'noopener';
           card.append(sp);
         }
