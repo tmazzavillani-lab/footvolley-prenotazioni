@@ -21,6 +21,7 @@
     return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).replace('T', ' ');
   }
   function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function oreTxt(n) { return n.toLocaleString('it-IT') + (n === 1 ? ' ora' : ' ore'); }
   function eur(v) { return '€' + (Math.round(v * 100) / 100).toLocaleString('it-IT'); }
   var METODI = { satispay: 'Satispay', contanti: 'Contanti', bonifico: 'Bonifico' };
   var METODI_ADMIN = { satispay: 'Satispay', contanti: 'Contanti', bonifico: 'Bonifico', prova: 'Prova gratuita' };
@@ -30,9 +31,9 @@
   function conti(s) {
     var c = { ore: 0, previsto: 0, incassato: 0, costo: 0 };
     if (!s || !s.turni || s.annullata) return c;
-    FV_TURNI.forEach(function (T) {
+    fvTurniDi(s.date).forEach(function (T) {
       var t = s.turni[T.k]; if (!t || t.annullato) return;
-      if (t.count > 0) c.ore++;
+      if (t.count > 0) c.ore += T.ore;
       t.people.forEach(function (p) {
         var prezzo = p.prezzo != null ? p.prezzo : s.config.prezzo;
         if ((p.pagato && p.metodo === 'prova') || p.gratis) return;
@@ -141,7 +142,7 @@
       else if (!r) { t.people.push({ id: 'tmp', nome: p.nome, fisso: false, mine: p.action === 'book' }); t.count++; }
       t.assenti = t.assenti.filter(function (n) { return fvNorm(n) !== fvNorm(p.nome); });
     } else if (p.action === 'cancel') {
-      FV_TURNI.forEach(function (T) {
+      fvTurniDi(state.date).forEach(function (T) {
         var tt = state.turni[T.k];
         tt.people.forEach(function (x, i) {
           if (x.id !== p.id) return;
@@ -198,7 +199,7 @@
       renderDates();
     }
     var admin = state.admin, cfg = state.config, me = myName(), now = nowRome();
-    $('subline').textContent = FV_TURNI.map(function (T) { return T.l; }).join(' · ') + ' · ' + eur(cfg.prezzo) + ' a persona';
+    $('subline').textContent = fvTurniDi(curDate).map(function (T) { return T.l; }).join(' · ') + ' · ' + eur(cfg.prezzo) + ' a persona';
     var io = state.io, ver = $('verifica');
     ver.hidden = admin || !io || !me || fvNorm(io.nome) !== fvNorm(me);
     if (!ver.hidden) {
@@ -215,12 +216,13 @@
     pay.hidden = !cfg.satispay || state.annullata;
     if (cfg.satispay) { pay.href = cfg.satispay; pay.textContent = 'Paga ' + eur(cfg.prezzo) + ' con Satispay'; }
     var keep = {}, foc = document.activeElement && document.activeElement.id;
-    FV_TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x) keep[T.k] = x.value; });
+    var TURNI = fvTurniDi(curDate);
+    TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x) keep[T.k] = x.value; });
     var box = $('turni'); box.replaceChildren();
     var tot = 0, prove = 0, gratis = 0, previsto = 0, incassato = 0, perMetodo = { satispay: 0, contanti: 0, bonifico: 0 };
     var myTurn = null;
-    if (me) FV_TURNI.forEach(function (T) { if (state.turni[T.k].people.some(function (x) { return !x.riservato && fvNorm(x.nome) === fvNorm(me); })) myTurn = myTurn || T; });
-    FV_TURNI.forEach(function (T) {
+    if (me) TURNI.forEach(function (T) { if (state.turni[T.k].people.some(function (x) { return !x.riservato && fvNorm(x.nome) === fvNorm(me); })) myTurn = myTurn || T; });
+    TURNI.forEach(function (T) {
       var t = state.turni[T.k], n = t.count, cap = t.posti || cfg.posti, started = fvStarted(curDate, T.k, now);
       tot += n;
       var tAnn = !!t.annullato;
@@ -364,7 +366,7 @@
       }
       box.append(card);
     });
-    FV_TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x && keep[T.k]) x.value = keep[T.k]; });
+    TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x && keep[T.k]) x.value = keep[T.k]; });
     if (foc && /^add-/.test(foc) && $(foc)) $(foc).focus();
 
     $('adminBox').hidden = VISTA_ATLETA || !(admin || areaVisibile);
@@ -380,7 +382,7 @@
       $('tDue').textContent = eur(previsto - incassato);
       var cs = conti(state);
       $('tCosto').textContent = eur(cs.costo);
-      $('tOre').textContent = state.annullata ? 'serata annullata' : cs.ore + (cs.ore === 1 ? ' ora' : ' ore') + ' × ' + eur(COSTO_ORA);
+      $('tOre').textContent = state.annullata ? 'serata annullata' : oreTxt(cs.ore) + ' × ' + eur(COSTO_ORA);
       segno($('tMarg'), incassato - cs.costo);
       $('tMargPrev').textContent = 'se pagano tutti: ' + conSegno(previsto - cs.costo);
       renderMese();
@@ -427,7 +429,7 @@
     $('meseTit').textContent = nome.charAt(0).toUpperCase() + nome.slice(1) + (mancano ? ' · caricamento…' : '');
     $('costoOra').textContent = COSTO_ORA;
     $('mSerate').textContent = m.serate;
-    $('mOre').textContent = m.ore + (m.ore === 1 ? ' ora' : ' ore') + ' di campo';
+    $('mOre').textContent = oreTxt(m.ore) + ' di campo';
     $('mPaid').textContent = eur(m.incassato);
     $('mDue').textContent = 'da incassare ' + eur(m.previsto - m.incassato);
     $('mCosto').textContent = eur(m.costo);
@@ -452,9 +454,9 @@
       var s = cacheSerate[d]; if (!s || !s.turni || s.annullata) return;
       var k = d.slice(0, 7);
       if (!mesi[k]) { mesi[k] = { ore: 0, futuro: 0 }; ordine.push(k); }
-      FV_TURNI.forEach(function (T) {
+      fvTurniDi(d).forEach(function (T) {
         var t = s.turni[T.k]; if (!t || !t.count || t.annullato) return;
-        if (fvStarted(d, T.k, now)) mesi[k].ore++; else mesi[k].futuro++;
+        if (fvStarted(d, T.k, now)) mesi[k].ore += T.ore; else mesi[k].futuro += T.ore;
       });
     });
     var tb = $('struttura'); tb.replaceChildren();
@@ -463,8 +465,8 @@
     if (!ordine.length) { var vr = el('tr'), vc = el('td', 'empty', 'Nessuna serata'); vc.colSpan = 5; vr.append(vc); tb.append(vr); return; }
     ordine.sort().reverse().forEach(function (k) {
       var m = mesi[k], nome = dateLabel(k + '-15', { month: 'long', year: 'numeric' }), tr = el('tr');
-      tr.append(el('td', null, nome.charAt(0).toUpperCase() + nome.slice(1)), el('td', null, String(m.ore)),
-        el('td', 'tot', eur(m.ore * COSTO_ORA)), el('td', null, m.futuro ? '+' + eur(m.futuro * COSTO_ORA) + ' (' + m.futuro + (m.futuro === 1 ? ' ora)' : ' ore)') : '—'));
+      tr.append(el('td', null, nome.charAt(0).toUpperCase() + nome.slice(1)), el('td', null, m.ore.toLocaleString('it-IT')),
+        el('td', 'tot', eur(m.ore * COSTO_ORA)), el('td', null, m.futuro ? '+' + eur(m.futuro * COSTO_ORA) + ' (' + oreTxt(m.futuro) + ')' : '—'));
       var td = el('td', 'saldo'), sx = saldati[k], dovuto = m.ore * COSTO_ORA;
       if (sx) {
         tr.classList.add('saldato'); tr.cells[2].className = 'tot ok';
@@ -487,7 +489,7 @@
     if (!adminCfg) return;
     var box = $('fissi'), focus = document.activeElement && document.activeElement.id;
     box.replaceChildren();
-    FV_TURNI.forEach(function (T) {
+    fvTurniDi(nowRome().slice(0, 10)).forEach(function (T) {
       var col = el('div', 'col'), list = adminCfg.fissi[T.k];
       col.append(el('h3', null, T.l + ' · ' + list.length + ' fissi'));
       var pl = el('label', 'postiturno'), pi = el('input'); pi.type = 'number'; pi.min = 1; pi.max = 30; pi.id = 'pt-' + T.k;

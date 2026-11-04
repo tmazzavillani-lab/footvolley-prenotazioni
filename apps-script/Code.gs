@@ -1,14 +1,22 @@
 // FILE GENERATO da build-gs.sh: modifica core.js o apps-script/adapter.js, non questo.
 // Logica delle prenotazioni, condivisa tra l'app (modalità prova) e Google Apps Script.
 // Se la modifichi, rigenera apps-script/Code.gs con: sh build-gs.sh
-var FV_TURNI = [{ k: 't17', h: '17', l: '17–18', p: 4 }, { k: 't18', h: '18', l: '18–19' }, { k: 't19', h: '19', l: '19–20' }, { k: 't20', h: '20', l: '20–21' }];
+// Tutte le chiavi di turno usate nel tempo (fissi e posti sono salvati per chiave)
+var FV_TURNI = [{ k: 't17', h: '17:00', l: '17–18', ore: 1, p: 4 }, { k: 't18', h: '18:00', l: '18–19', ore: 1 }, { k: 't19', h: '19:00', l: '19–20', ore: 1 }, { k: 't20', h: '20:00', l: '20–21', ore: 1 }];
+// Orari per periodo (il più recente per primo): dal 28/10/2026 tre turni, 17–18 e due da un'ora e mezza
+var FV_ORARI = [
+  { dal: '2026-10-28', turni: [{ k: 't17', h: '17:00', l: '17–18', ore: 1, p: 4 }, { k: 't18', h: '18:00', l: '18–19:30', ore: 1.5 }, { k: 't19', h: '19:30', l: '19:30–21', ore: 1.5 }] },
+  { dal: '', turni: FV_TURNI }
+];
+function fvTurniDi(d) { for (var i = 0; i < FV_ORARI.length; i++) if (!FV_ORARI[i].dal || String(d) >= FV_ORARI[i].dal) return FV_ORARI[i].turni; return FV_TURNI; }
+function fvTurnoDi(d, k) { return fvTurniDi(d).filter(function (t) { return t.k === k; })[0]; }
 
 function fvNorm(s) { return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
 function fvClean(s) { return String(s || '').replace(/[<>]/g, '').trim().replace(/\s+/g, ' ').slice(0, 40); }
 function fvHas(arr, n) { return arr.some(function (x) { return fvNorm(x) === fvNorm(n); }); }
 function fvIsWed(d) { return /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(d + 'T12:00:00Z').getUTCDay() === 3; }
 function fvTurno(k) { return FV_TURNI.filter(function (t) { return t.k === k; })[0]; }
-function fvStarted(d, k, nowStr) { return nowStr >= d + ' ' + fvTurno(k).h + ':00'; }
+function fvStarted(d, k, nowStr) { var T = fvTurnoDi(d, k) || fvTurno(k); return nowStr >= d + ' ' + T.h; }
 var FV_INIZIO = '2026-10-01'; // fissi inseriti prima dello storico contano da questa data
 function fvIsDay(d) { return /^\d{4}-\d{2}-\d{2}$/.test(String(d || '')); }
 function fvTurnoAnnullato(cfg, d, k) { return (cfg.turniAnnullati || []).indexOf(d + '|' + k) >= 0; }
@@ -101,7 +109,7 @@ function fvState(cfg, st, d, token, admin, nowStr) {
   var day = function (r) { return r.data === d; };
   var P = st.list('P').filter(day), A = st.list('A').filter(day), G = st.list('G').filter(day), D = st.list('D').filter(day), S = st.list('S').filter(day);
   var scaduta = fvScaduta(d, nowStr), turni = {};
-  FV_TURNI.forEach(function (T) {
+  fvTurniDi(d).forEach(function (T) {
     var k = T.k, fx = fvFissiAl(cfg, k, d);
     var ass = A.filter(function (r) { return r.turno === k; }).map(function (r) { return r.nome; });
     var Pk = P.filter(function (r) { return r.turno === k; });
@@ -149,7 +157,7 @@ function fvDaSaldare(cfg, st, nome, nowStr) {
   var same = function (x) { return function (r) { return r.data === x.data && r.turno === x.turno && fvNorm(r.nome) === fvNorm(x.nome); }; };
   st.list('P').forEach(function (x) {
     if (fvNorm(x.nome) !== fvNorm(nome) || !fvIsWed(x.data) || x.data < FV_INIZIO || cfg.annullate.indexOf(x.data) >= 0) return;
-    if (!fvTurno(x.turno) || fvTurnoAnnullato(cfg, x.data, x.turno) || !fvStarted(x.data, x.turno, nowStr) || G.some(same(x))) return;
+    if (!fvTurnoDi(x.data, x.turno) || fvTurnoAnnullato(cfg, x.data, x.turno) || !fvStarted(x.data, x.turno, nowStr) || G.some(same(x))) return;
     var sc = S.filter(same(x))[0], pz = sc && sc.prezzo !== '' && Number(sc.prezzo) >= 0 ? Number(sc.prezzo) : fvPrezzo(cfg, nome);
     if (!pz) return;
     var dd = D.filter(same(x))[0];
@@ -254,7 +262,7 @@ function fvRoute(p, st, nowStr) {
 
   var k = p.turno, nome = fvClean(p.nome);
   var needTurno = ['book', 'absent', 'add', 'pay', 'declare', 'sconto'].indexOf(a) >= 0;
-  if (needTurno && !fvTurno(k)) throw new Error('Turno non valido');
+  if (needTurno && !fvTurnoDi(d, k)) throw new Error('Turno non valido');
   var full = needTurno ? fvState(cfg, st, d, token, true, nowStr) : null, cur = full ? full.turni[k] : null;
   var isFisso = needTurno && fvHas(fvFissiAl(cfg, k, d), nome);
   var annullata = cfg.annullate.indexOf(d) >= 0;
@@ -271,7 +279,7 @@ function fvRoute(p, st, nowStr) {
     }
     var gia = trova(nome);
     if (gia && !gia.riservato) throw new Error(nome + ' è già nella lista');
-    FV_TURNI.forEach(function (T) {
+    fvTurniDi(d).forEach(function (T) {
       if (T.k !== k && full.turni[T.k].people.some(function (x) { return fvNorm(x.nome) === fvNorm(nome); })) throw new Error(nome + ' è già prenotato nel turno ' + T.l);
     });
     if (!admin && !fvVerificato(st, nome, token)) throw new Error('Prima verifica il tuo nome con l’email (in alto)');
@@ -336,7 +344,7 @@ function fvRoute(p, st, nowStr) {
   } else if (a === 'toggleTurno') {
     // annulla (o riattiva) un solo turno della serata: non si paga il campo e non si incassa
     if (!admin) throw new Error('Serve il PIN istruttore');
-    if (!fvTurno(k)) throw new Error('Turno non valido');
+    if (!fvTurnoDi(d, k)) throw new Error('Turno non valido');
     cfg.turniAnnullati = cfg.turniAnnullati.filter(function (x) { return x !== d + '|' + k; });
     if (p.annullato) cfg.turniAnnullati.push(d + '|' + k);
     st.setConfig(cfg);
@@ -437,6 +445,36 @@ var FvSheetStore = {
     for (var i = rows.length - 1; i >= 0; i--) if (fn(rows[i])) { sh = sh || fvSheet_(k); sh.deleteRow(i + 2); fvRows_[k].splice(i, 1); }
   }
 };
+
+// UNA TANTUM (nov 2026): nuovi gruppi da 3 turni. Dal 28/10 il vecchio 20–21 (t20) confluisce nel 19:30–21 (t19);
+// i fissi diventano quelli indicati dall'istruttore a partire dal 4/11. Esegui una volta dall'editor.
+function migraTurni202611() {
+  var lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    var spostate = 0, tolte = 0;
+    ['P', 'A', 'G', 'D', 'S'].forEach(function (k) {
+      var rows = FvSheetStore.list(k), sh = fvSheet_(k), col = FV_HEAD[k].indexOf('turno') + 1;
+      var chiave = function (r, t) { return r.data + '|' + t + '|' + fvNorm(r.nome); };
+      var gia = {}; rows.forEach(function (r) { gia[chiave(r, r.turno)] = true; });
+      for (var i = rows.length - 1; i >= 0; i--) {
+        var r = rows[i];
+        if (r.turno !== 't20' || r.data < '2026-10-28') continue;
+        if (gia[chiave(r, 't19')]) { sh.deleteRow(i + 2); tolte++; }
+        else { sh.getRange(i + 2, col).setValue('t19'); gia[chiave(r, 't19')] = true; spostate++; }
+      }
+    });
+    var cfg = fvFixConfig(FvSheetStore.getConfig()), nuovi = {
+      t17: ['Filippo Faccani', 'Nicola Drei', 'Tomaso Mazzavillani'],
+      t18: ['Emanuele Zalambani', 'Iuri focaccia', 'Cristiano Diotti', 'Matteo Mancini'],
+      t19: ['Filippo Bazzi', 'Nicola Bendandi', 'Ettore Amodio', 'Diego nicolosi', 'Alessia Verlicchi', 'Majkel Kukaj'],
+      t20: []
+    };
+    FV_TURNI.forEach(function (t) { cfg.fissi[t.k] = fvAggiornaFissi(cfg.fissi[t.k] || [], nuovi[t.k], '2026-11-04'); });
+    FvSheetStore.setConfig(fvFixConfig(cfg));
+    Logger.log('Righe spostate da 20–21 a 19:30–21: ' + spostate + ', doppioni tolti: ' + tolte);
+    FV_TURNI.forEach(function (t) { Logger.log(t.k + ' fissi: ' + fvFissiOggi(cfg.fissi[t.k]).join(', ')); });
+  } finally { lock.releaseLock(); }
+}
 
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.
 function setup() {

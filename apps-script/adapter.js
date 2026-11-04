@@ -85,6 +85,36 @@ var FvSheetStore = {
   }
 };
 
+// UNA TANTUM (nov 2026): nuovi gruppi da 3 turni. Dal 28/10 il vecchio 20–21 (t20) confluisce nel 19:30–21 (t19);
+// i fissi diventano quelli indicati dall'istruttore a partire dal 4/11. Esegui una volta dall'editor.
+function migraTurni202611() {
+  var lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    var spostate = 0, tolte = 0;
+    ['P', 'A', 'G', 'D', 'S'].forEach(function (k) {
+      var rows = FvSheetStore.list(k), sh = fvSheet_(k), col = FV_HEAD[k].indexOf('turno') + 1;
+      var chiave = function (r, t) { return r.data + '|' + t + '|' + fvNorm(r.nome); };
+      var gia = {}; rows.forEach(function (r) { gia[chiave(r, r.turno)] = true; });
+      for (var i = rows.length - 1; i >= 0; i--) {
+        var r = rows[i];
+        if (r.turno !== 't20' || r.data < '2026-10-28') continue;
+        if (gia[chiave(r, 't19')]) { sh.deleteRow(i + 2); tolte++; }
+        else { sh.getRange(i + 2, col).setValue('t19'); gia[chiave(r, 't19')] = true; spostate++; }
+      }
+    });
+    var cfg = fvFixConfig(FvSheetStore.getConfig()), nuovi = {
+      t17: ['Filippo Faccani', 'Nicola Drei', 'Tomaso Mazzavillani'],
+      t18: ['Emanuele Zalambani', 'Iuri focaccia', 'Cristiano Diotti', 'Matteo Mancini'],
+      t19: ['Filippo Bazzi', 'Nicola Bendandi', 'Ettore Amodio', 'Diego nicolosi', 'Alessia Verlicchi', 'Majkel Kukaj'],
+      t20: []
+    };
+    FV_TURNI.forEach(function (t) { cfg.fissi[t.k] = fvAggiornaFissi(cfg.fissi[t.k] || [], nuovi[t.k], '2026-11-04'); });
+    FvSheetStore.setConfig(fvFixConfig(cfg));
+    Logger.log('Righe spostate da 20–21 a 19:30–21: ' + spostate + ', doppioni tolti: ' + tolte);
+    FV_TURNI.forEach(function (t) { Logger.log(t.k + ' fissi: ' + fvFissiOggi(cfg.fissi[t.k]).join(', ')); });
+  } finally { lock.releaseLock(); }
+}
+
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.
 function setup() {
   ['P', 'A', 'G', 'D', 'U', 'S'].forEach(fvSheet_);
