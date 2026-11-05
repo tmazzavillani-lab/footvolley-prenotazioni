@@ -198,7 +198,8 @@ body.busy #turni button,body.busy #turni .pay{pointer-events:none;opacity:.6}
 .serate tr.tot td{font-weight:700;border-top:2px solid var(--line);cursor:default}
 .totals .prev{background:var(--bg)}
 #serataTit,#meseTit{margin:4px 0 0}
-.struttura td.saldo{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.struttura .saldo{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.struttura .saldo .muted{color:var(--muted);font-size:.8rem}
 .table-wrap{overflow-x:auto}
 .atleti{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 

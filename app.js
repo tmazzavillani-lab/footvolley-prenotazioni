@@ -501,19 +501,27 @@
       var m = mesi[k], nome = dateLabel(k + '-15', { month: 'long', year: 'numeric' }), tr = el('tr');
       tr.append(el('td', null, nome.charAt(0).toUpperCase() + nome.slice(1)), el('td', null, m.ore.toLocaleString('it-IT')),
         el('td', 'tot', eur(m.ore * COSTO_ORA)), el('td', null, m.futuro ? '+' + eur(m.futuro * COSTO_ORA) + ' (' + oreTxt(m.futuro) + ')' : '—'));
-      var td = el('td', 'saldo'), sx = saldati[k], dovuto = m.ore * COSTO_ORA;
+      // il contenuto sta in un div: la cella resta una cella di tabella (bordi allineati)
+      var td = el('td'), box = el('div', 'saldo'), sx = saldati[k], dovuto = m.ore * COSTO_ORA;
+      td.append(box);
       debitoStruttura += Math.max(0, dovuto - (sx ? sx.importo : 0));
       if (sx) {
         tr.classList.add('saldato'); tr.cells[2].className = 'tot ok';
-        td.append(el('span', 'paid ok', '✓ Saldato ' + eur(sx.importo) + ' il ' + dateLabel(sx.il, { day: 'numeric', month: 'short' })));
-        if (dovuto > sx.importo) td.append(el('span', 'paid no', 'mancano ' + eur(dovuto - sx.importo)));
-        td.append(btn('link back', dovuto > sx.importo ? 'Aggiorna a ' + eur(dovuto) : 'Annulla', function () {
+        box.append(el('span', 'paid ok', '✓ Saldato ' + eur(sx.importo) + ' il ' + dateLabel(sx.il, { day: 'numeric', month: 'short' })));
+        if (dovuto > sx.importo) box.append(el('span', 'paid no', 'mancano ' + eur(dovuto - sx.importo)));
+        box.append(btn('link back', dovuto > sx.importo ? 'Aggiorna a ' + eur(dovuto) : 'Annulla', function () {
           if (dovuto > sx.importo) segnaSaldo(k, true, dovuto); else if (confirm('Togliere il saldo di ' + nomeMese(k) + '?')) segnaSaldo(k, false);
         }));
-      } else if (dovuto > 0) {
-        td.append(btn('btn small', 'Segna saldato', function () {
+      } else {
+        // si può segnare saldato solo da quando il mese è iniziato e ci sono ore giocate
+        var iniziato = k <= nowRome().slice(0, 7), b = btn('btn small', 'Segna saldato', function () {
           if (confirm('Hai pagato ' + eur(dovuto) + ' alla struttura per ' + nomeMese(k) + '?')) segnaSaldo(k, true, dovuto);
-        }));
+        });
+        b.disabled = !iniziato || !dovuto;
+        if (!iniziato) b.title = 'Disponibile dal 1° ' + dateLabel(k + '-15', { month: 'long' });
+        else if (!dovuto) b.title = 'Nessuna ora giocata ancora';
+        box.append(b);
+        if (!iniziato) box.append(el('small', 'muted', 'dal 1° ' + dateLabel(k + '-15', { month: 'long' })));
       }
       tr.append(td);
       tb.append(tr);
