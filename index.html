@@ -6,7 +6,7 @@
 <title>Ravenna Footvolley · Prenotazioni</title>
 <script>
   // Se il browser (anche quello di WhatsApp) ha in memoria una pagina vecchia, ricarica quella nuova
-  window.FV_VERSIONE = 44;
+  window.FV_VERSIONE = 45;
   (function () {
     try {
       fetch('versione.txt?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (v) {
@@ -26,7 +26,7 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=44">
+<link rel="stylesheet" href="style.css?v=45">
 </head>
 <body>
 <div class="wrap">
@@ -108,22 +108,25 @@
       <button class="btn" type="submit">Entra</button>
     </form>
     <div id="adminPanel" hidden>
+      <h3 id="serataTit">Conto della serata</h3>
       <div class="totals">
         <div><span>Iscritti</span><b id="tPres">0</b></div>
-        <div><span>Previsto</span><b id="tPrev">€0</b></div>
-        <div class="paid"><span>Incassato</span><b id="tPaid">€0</b><small id="tMetodi"></small></div>
-        <div class="due"><span>Da incassare</span><b id="tDue">€0</b></div>
         <div><span>Costo campo</span><b id="tCosto">€0</b><small id="tOre"></small></div>
-        <div class="margine"><span>Margine</span><b id="tMarg">€0</b><small id="tMargPrev"></small></div>
+        <div class="paid"><span>Incassato</span><b id="tPaid">€0</b><small id="tMetodi"></small></div>
+        <div class="due"><span>Da incassare</span><b id="tDue">€0</b><small id="tPrev"></small></div>
+        <div class="margine"><span id="tMargLab">Margine ora</span><b id="tMarg">€0</b><small>incassato − costo campo</small></div>
+        <div class="margine prev"><span>Se pagano tutti</span><b id="tMargPrev">€0</b><small>previsione della serata</small></div>
       </div>
       <h3 id="meseTit">Mese</h3>
       <div class="totals" id="meseBox">
         <div><span>Serate</span><b id="mSerate">0</b><small id="mOre"></small></div>
+        <div><span>Costo campo</span><b id="mCosto">€0</b><small id="mCostoGioc"></small></div>
         <div class="paid"><span>Incassato</span><b id="mPaid">€0</b><small id="mDue"></small></div>
-        <div><span>Costo campo</span><b id="mCosto">€0</b></div>
-        <div class="margine"><span>Margine</span><b id="mMarg">€0</b><small id="mMargPrev"></small></div>
+        <div class="margine"><span id="mMargLab">Margine ora</span><b id="mMarg">€0</b><small>serate già giocate</small></div>
+        <div class="margine prev"><span>Se pagano tutti</span><b id="mMargPrev">€0</b><small>previsione del mese</small></div>
       </div>
-      <p class="hint">Il campo costa €<span id="costoOra">24</span> l'ora alla struttura: si conta ogni turno con almeno un iscritto, le serate annullate non costano. Margine = incassato − costo campo. Il mese somma le serate già caricate (ultime 12 e prossime 4).</p>
+      <div class="table-wrap"><table class="struttura serate"><thead><tr><th>Serata</th><th>Iscritti</th><th>Costo campo</th><th>Incassato</th><th>Da incassare</th><th>Margine ora</th><th>Se pagano tutti</th></tr></thead><tbody id="meseSerate"></tbody></table></div>
+      <p class="hint">Il campo costa €<span id="costoOra">24</span> l'ora alla struttura: si conta ogni turno con almeno un iscritto, turni e serate annullati non costano. <b>Margine ora</b> = incassato − costo campo delle serate già giocate. <b>Se pagano tutti</b> = tutto quello che è previsto − costo campo, comprese le serate in programma con gli iscritti di oggi. Tocca una serata per aprirla.</p>
       <h3>Da saldare alla struttura</h3>
       <div class="table-wrap"><table class="struttura"><thead><tr><th>Mese</th><th>Ore giocate</th><th>Da saldare</th><th>Ancora previsto</th><th>Struttura</th></tr></thead><tbody id="struttura"></tbody></table></div>
       <p class="hint">Da saldare = turni già giocati (con almeno un iscritto) × €<span id="costoOra2">24</span>. Ancora previsto = turni del mese non ancora giocati che oggi hanno iscritti. Quando paghi la struttura tocca <b>Segna saldato</b>: se poi si giocano altre ore nello stesso mese compare quanto manca.</p>
@@ -145,8 +148,8 @@
     </div>
   </section>
 </div>
-<script src="config.js?v=44"></script>
-<script src="core.js?v=44"></script>
-<script src="app.js?v=44"></script>
+<script src="config.js?v=45"></script>
+<script src="core.js?v=45"></script>
+<script src="app.js?v=45"></script>
 </body>
 </html>

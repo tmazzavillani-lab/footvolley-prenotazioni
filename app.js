@@ -172,6 +172,13 @@
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function btn(cls, text, fn, title) { var b = el('button', cls, text); b.type = 'button'; b.onclick = fn; if (title) b.title = title; return b; }
 
+  function apriSerata(d) {
+    if (d === curDate) return; curDate = d; renderDates();
+    if (cacheSerate[d]) { state = cacheSerate[d]; render(); load(); }
+    else { $('turni').classList.add('attesa'); load(); }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   var datesAdmin = false;
   function renderDates() {
     var box = $('dates'), next = wednesdays()[0], sel = null; box.replaceChildren();
@@ -183,11 +190,7 @@
       if (d === curDate) sel = b;
       b.append(el('small', null, d < next ? 'concluso' : 'mer'), document.createTextNode(dateLabel(d, { day: 'numeric', month: 'short' })));
       b.setAttribute('aria-label', dateLabel(d, { weekday: 'long', day: 'numeric', month: 'long' }));
-      b.onclick = function () {
-        if (d === curDate) return; curDate = d; renderDates();
-        if (cacheSerate[d]) { state = cacheSerate[d]; render(); load(); }
-        else { $('turni').classList.add('attesa'); load(); }
-      };
+      b.onclick = function () { apriSerata(d); };
       box.append(b);
     });
     box.classList.toggle('quattro', box.children.length <= 4);
@@ -381,7 +384,7 @@
     if (admin) {
       var extra = []; if (prove) extra.push(prove + ' in prova'); if (gratis) extra.push(gratis + ' gratis');
       $('tPres').textContent = tot + (extra.length ? ' (' + extra.join(', ') + ')' : '');
-      $('tPrev').textContent = eur(previsto);
+      $('tPrev').textContent = 'previsto in tutto ' + eur(previsto);
       $('tPaid').textContent = eur(incassato);
       $('tMetodi').textContent = Object.keys(METODI).map(function (m) { return METODI[m] + ' ' + eur(perMetodo[m]); }).join(' · ');
       $('tDue').textContent = eur(previsto - incassato);
@@ -389,7 +392,9 @@
       $('tCosto').textContent = eur(cs.costo);
       $('tOre').textContent = state.annullata ? 'serata annullata' : oreTxt(cs.ore) + ' × ' + eur(COSTO_ORA);
       segno($('tMarg'), incassato - cs.costo);
-      $('tMargPrev').textContent = 'se pagano tutti: ' + conSegno(previsto - cs.costo);
+      $('tMargLab').textContent = incassato - cs.costo < 0 ? 'Perdita ora' : 'Margine ora';
+      segno($('tMargPrev'), previsto - cs.costo);
+      $('serataTit').textContent = 'Conto della serata · ' + dateLabel(curDate, { weekday: 'long', day: 'numeric', month: 'long' }) + (giocata(curDate) ? '' : ' (in programma)');
       renderMese();
       $('toggleDate').textContent = state.annullata ? 'Riattiva questa serata' : 'Annulla questa serata';
       renderFissi();
@@ -422,24 +427,46 @@
   }
 
   // Riepilogo del mese della serata scelta, sulle serate già caricate
+  // la serata è giocata quando è iniziato il primo turno
+  function giocata(d) { var T = fvTurniDi(d)[0]; return fvStarted(d, T.k, nowRome()); }
+  function iscritti(s) {
+    var n = 0; if (!s || !s.turni || s.annullata) return 0;
+    fvTurniDi(s.date).forEach(function (T) { var t = s.turni[T.k]; if (t && !t.annullato) n += t.count; });
+    return n;
+  }
   function renderMese() {
-    var mese = curDate.slice(0, 7), m = { serate: 0, ore: 0, costo: 0, previsto: 0, incassato: 0 }, mancano = 0;
+    var mese = curDate.slice(0, 7), m = { serate: 0, giocate: 0, ore: 0, costo: 0, costoGioc: 0, previsto: 0, incassato: 0, margOra: 0 }, mancano = 0;
+    var tb = $('meseSerate'); tb.replaceChildren();
+    var td = function (cls, v) { var x = el('td', cls); if (typeof v === 'number') segno(x, v); else x.textContent = v; return x; };
     wednesdays(12).forEach(function (d) {
       if (d.slice(0, 7) !== mese) return;
       var s = cacheSerate[d]; if (!s) { mancano++; return; }
-      var c = conti(s); if (!c.ore) return;
-      m.serate++; m.ore += c.ore; m.costo += c.costo; m.previsto += c.previsto; m.incassato += c.incassato;
+      var c = conti(s), gioc = giocata(d), tr = el('tr');
+      if (!c.ore && !s.annullata) return;
+      if (c.ore) { m.serate++; m.ore += c.ore; m.costo += c.costo; m.previsto += c.previsto; m.incassato += c.incassato; }
+      if (c.ore && gioc) { m.giocate++; m.costoGioc += c.costo; m.margOra += c.incassato - c.costo; }
+      tr.append(td(null, dateLabel(d, { day: 'numeric', month: 'short' }) + (s.annullata ? ' · annullata' : gioc ? '' : ' · in programma')));
+      tr.append(td(null, String(iscritti(s))), td(null, eur(c.costo) + (c.ore ? ' (' + oreTxt(c.ore) + ')' : '')), td(null, eur(c.incassato)), td(null, eur(c.previsto - c.incassato)));
+      tr.append(gioc && c.ore ? td(null, c.incassato - c.costo) : td(null, '—'), td(null, c.previsto - c.costo));
+      if (d === curDate) tr.className = 'sel';
+      tr.onclick = function () { apriSerata(d); };
+      tb.append(tr);
     });
+    var tot = el('tr', 'tot');
+    tot.append(td(null, 'Totale mese'), td(null, ''), td(null, eur(m.costo)), td(null, eur(m.incassato)), td(null, eur(m.previsto - m.incassato)), td(null, m.margOra), td(null, m.previsto - m.costo));
+    tb.append(tot);
     var nome = dateLabel(mese + '-15', { month: 'long', year: 'numeric' });
-    $('meseTit').textContent = nome.charAt(0).toUpperCase() + nome.slice(1) + (mancano ? ' · caricamento…' : '');
+    $('meseTit').textContent = 'Conto del mese · ' + nome + (mancano ? ' · caricamento…' : '');
     $('costoOra').textContent = COSTO_ORA;
     $('mSerate').textContent = m.serate;
-    $('mOre').textContent = oreTxt(m.ore) + ' di campo';
+    $('mOre').textContent = m.giocate + ' giocate · ' + (m.serate - m.giocate) + ' in programma · ' + oreTxt(m.ore);
+    $('mCosto').textContent = eur(m.costo);
+    $('mCostoGioc').textContent = 'già giocato ' + eur(m.costoGioc);
     $('mPaid').textContent = eur(m.incassato);
     $('mDue').textContent = 'da incassare ' + eur(m.previsto - m.incassato);
-    $('mCosto').textContent = eur(m.costo);
-    segno($('mMarg'), m.incassato - m.costo);
-    $('mMargPrev').textContent = 'se pagano tutti: ' + conSegno(m.previsto - m.costo);
+    segno($('mMarg'), m.margOra);
+    $('mMargLab').textContent = m.margOra < 0 ? 'Perdita ora' : 'Margine ora';
+    segno($('mMargPrev'), m.previsto - m.costo);
     renderStruttura();
   }
 

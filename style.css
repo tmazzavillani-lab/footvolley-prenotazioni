@@ -180,6 +180,14 @@ body.busy #turni button,body.busy #turni .pay{pointer-events:none;opacity:.6}
 .struttura td{padding:8px;border-bottom:1px solid var(--line)}
 .struttura td.tot{font-weight:700;color:var(--warn)}
 .struttura td.tot.ok{color:var(--ok)}
+.struttura td.pos{color:var(--ok);font-weight:700}
+.struttura td.neg{color:var(--warn);font-weight:700}
+.serate tbody tr{cursor:pointer}
+.serate tbody tr:hover td{background:var(--sea-soft)}
+.serate tr.sel td{background:var(--sea-soft)}
+.serate tr.tot td{font-weight:700;border-top:2px solid var(--line);cursor:default}
+.totals .prev{background:var(--bg)}
+#serataTit,#meseTit{margin:4px 0 0}
 .struttura td.saldo{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .table-wrap{overflow-x:auto}
 .atleti{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
