@@ -28,6 +28,16 @@ h3{font-size:1.2rem;font-weight:600}
 .banner{background:var(--warn-soft);color:var(--warn);font-weight:600;border-radius:12px;padding:12px 14px}
 .toast{border-radius:12px;padding:10px 14px;font-weight:500;background:var(--ok-soft);color:var(--ok)}
 .toast.err{background:var(--warn-soft);color:var(--warn)}
+.arretrato{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--warn-soft);border-top:2px solid var(--warn);box-shadow:0 -4px 16px rgba(0,0,0,.12);padding:0 16px calc(env(safe-area-inset-bottom,0px));max-height:55vh;overflow:auto}
+.arretrato.ok{background:var(--ok-soft);border-top-color:var(--ok)}
+.arretrato[hidden]{display:none}
+.arr-sum{display:block;width:100%;max-width:1100px;margin:0 auto;padding:12px 0;border:0;background:none;color:var(--warn);font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.arretrato.ok .arr-sum{color:var(--ok);cursor:default}
+.arr-det{max-width:1100px;margin:0 auto;padding-bottom:12px;display:flex;flex-direction:column;gap:6px}
+.arr-riga{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;background:var(--surface);border-radius:10px;padding:8px 12px;font-size:.92rem}
+.arr-tot{font-weight:700;color:var(--warn);margin-right:auto}
+body.con-arretrato{padding-bottom:64px}
+body.con-arretrato .toast{bottom:calc(64px + env(safe-area-inset-bottom,0px))}
 .me{display:flex;flex-direction:column;gap:6px;max-width:420px}
 .me label,.settings label{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
 input[type=text],input[type=number],input[type=password],input[type=url],input[type=email]{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;width:100%}

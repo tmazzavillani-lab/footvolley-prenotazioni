@@ -381,6 +381,7 @@
     $('logout').hidden = !admin;
     $('login').hidden = admin;
     $('adminPanel').hidden = !admin;
+    if (!admin) renderArretrato();
     if (admin) {
       var extra = []; if (prove) extra.push(prove + ' in prova'); if (gratis) extra.push(gratis + ' gratis');
       $('tPres').textContent = tot + (extra.length ? ' (' + extra.join(', ') + ')' : '');
@@ -492,14 +493,16 @@
       });
     });
     var tb = $('struttura'); tb.replaceChildren();
+    debitoStruttura = 0;
     $('costoOra2').textContent = COSTO_ORA;
     var saldati = saldatiLoc || state.config.saldati || {};
-    if (!ordine.length) { var vr = el('tr'), vc = el('td', 'empty', 'Nessuna serata'); vc.colSpan = 5; vr.append(vc); tb.append(vr); return; }
+    if (!ordine.length) { var vr = el('tr'), vc = el('td', 'empty', 'Nessuna serata'); vc.colSpan = 5; vr.append(vc); tb.append(vr); renderArretrato(); return; }
     ordine.sort().reverse().forEach(function (k) {
       var m = mesi[k], nome = dateLabel(k + '-15', { month: 'long', year: 'numeric' }), tr = el('tr');
       tr.append(el('td', null, nome.charAt(0).toUpperCase() + nome.slice(1)), el('td', null, m.ore.toLocaleString('it-IT')),
         el('td', 'tot', eur(m.ore * COSTO_ORA)), el('td', null, m.futuro ? '+' + eur(m.futuro * COSTO_ORA) + ' (' + oreTxt(m.futuro) + ')' : '—'));
       var td = el('td', 'saldo'), sx = saldati[k], dovuto = m.ore * COSTO_ORA;
+      debitoStruttura += Math.max(0, dovuto - (sx ? sx.importo : 0));
       if (sx) {
         tr.classList.add('saldato'); tr.cells[2].className = 'tot ok';
         td.append(el('span', 'paid ok', '✓ Saldato ' + eur(sx.importo) + ' il ' + dateLabel(sx.il, { day: 'numeric', month: 'short' })));
@@ -514,6 +517,44 @@
       }
       tr.append(td);
       tb.append(tr);
+    });
+    renderArretrato();
+  }
+
+  // Barra fissa in fondo, solo istruttore: chi deve ancora pagare serate già giocate e quanto devi alla struttura
+  var debitoStruttura = 0, arrAperto = false;
+  function renderArretrato() {
+    var box = $('arretrato');
+    if (!state || !state.admin || VISTA_ATLETA) { box.hidden = true; document.body.classList.remove('con-arretrato'); return; }
+    var now = nowRome(), chi = {}, tot = 0;
+    wednesdays(12).forEach(function (d) {
+      var s = cacheSerate[d]; if (!s || !s.turni || s.annullata) return;
+      fvTurniDi(d).forEach(function (T) {
+        var t = s.turni[T.k]; if (!t || t.annullato || !fvStarted(d, T.k, now)) return;
+        t.people.forEach(function (p) {
+          if (p.riservato || p.pagato || p.gratis) return;
+          var pz = p.prezzo != null ? p.prezzo : (t.prezzo != null ? t.prezzo : s.config.prezzo); if (!pz) return;
+          var k = fvNorm(p.nome), x = chi[k] = chi[k] || { nome: p.nome, tot: 0, serate: [] };
+          x.tot += pz; tot += pz; x.serate.push({ d: d, dich: !!p.dichiarato, metodo: p.metodo });
+        });
+      });
+    });
+    var lista = Object.keys(chi).map(function (k) { return chi[k]; }).sort(function (a, b) { return b.tot - a.tot; });
+    box.hidden = false; document.body.classList.add('con-arretrato');
+    box.classList.toggle('ok', !tot && !debitoStruttura);
+    var sum = $('arrSum');
+    sum.textContent = (tot ? '⚠ Arretrato atleti ' + eur(tot) + ' (' + lista.length + (lista.length === 1 ? ' persona)' : ' persone)') : '✓ Atleti in regola')
+      + ' · ' + (debitoStruttura ? 'Struttura da saldare ' + eur(debitoStruttura) : 'Struttura saldata') + (tot ? (arrAperto ? ' ▾' : ' ▸') : '');
+    sum.setAttribute('aria-expanded', arrAperto);
+    sum.onclick = function () { if (!tot) return; arrAperto = !arrAperto; renderArretrato(); };
+    var det = $('arrDet'); det.replaceChildren(); det.hidden = !arrAperto || !tot;
+    lista.forEach(function (x) {
+      var r = el('div', 'arr-riga');
+      r.append(el('b', null, x.nome), el('span', 'arr-tot', eur(x.tot)));
+      x.serate.forEach(function (v) {
+        r.append(btn('link back', dateLabel(v.d, { day: 'numeric', month: 'short' }) + (v.dich ? ' · dice ' + (METODI[v.metodo] || 'pagato') : ''), function () { apriSerata(v.d); }, 'Apri la serata per segnare il pagamento'));
+      });
+      det.append(r);
     });
   }
 
