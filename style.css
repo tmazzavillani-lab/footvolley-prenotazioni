@@ -36,6 +36,8 @@ h3{font-size:1.2rem;font-weight:600}
 .arr-det{max-width:1100px;margin:0 auto;padding-bottom:12px;display:flex;flex-direction:column;gap:6px}
 .arr-riga{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;background:var(--surface);border-radius:10px;padding:8px 12px;font-size:.92rem}
 .arr-tot{font-weight:700;color:var(--warn);margin-right:auto}
+.arr-riga .vai{color:var(--sea);border-color:var(--sea)}
+li.p.evidenzia{outline:3px solid var(--sun);outline-offset:2px;background:var(--sun-soft);transition:background .3s}
 body.con-arretrato{padding-bottom:64px}
 body.con-arretrato .toast{bottom:calc(64px + env(safe-area-inset-bottom,0px))}
 .me{display:flex;flex-direction:column;gap:6px;max-width:420px}
@@ -199,7 +201,9 @@ body.busy #turni button,body.busy #turni .pay{pointer-events:none;opacity:.6}
 .totals .prev{background:var(--bg)}
 #serataTit,#meseTit{margin:4px 0 0}
 .struttura .saldo{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.struttura .saldo .muted{color:var(--muted);font-size:.8rem}
+.struttura .saldo .muted,.struttura td .muted{color:var(--muted);font-size:.8rem}
+.struttura td.ok{color:var(--ok);font-weight:700}
+.mesi tr.tot td{font-weight:700;border-top:2px solid var(--line)}
 .table-wrap{overflow-x:auto}
 .atleti{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 

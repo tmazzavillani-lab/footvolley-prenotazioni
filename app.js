@@ -47,6 +47,8 @@
   function segno(b, v) { b.textContent = conSegno(v); b.className = v < 0 ? 'neg' : v > 0 ? 'pos' : ''; }
 
   var PRIMA_SERATA = '2026-10-07'; // prima serata con le prenotazioni online: prima non si mostra nulla
+  // settimane dalla prima serata a oggi: l'istruttore carica tutto lo storico per i riepiloghi
+  function settimaneStorico() { return Math.max(12, Math.ceil((Date.parse(nowRome().slice(0, 10)) - Date.parse(PRIMA_SERATA)) / 6048e5) + 1); }
   // Prossimi 4 mercoledì (oggi incluso fino alle 21), più `back` mercoledì passati
   function wednesdays(back) {
     var now = nowRome(), today = new Date(now.slice(0, 10) + 'T12:00:00'), out = [];
@@ -102,7 +104,7 @@
     return inCorso[d];
   }
   function precarica() {
-    wednesdays(state && state.admin ? 12 : 0).forEach(function (d) { if (d !== curDate && !cacheSerate[d]) chiedi(d).catch(function () { }); });
+    wednesdays(state && state.admin ? settimaneStorico() : 0).forEach(function (d) { if (d !== curDate && !cacheSerate[d]) chiedi(d).catch(function () { }); });
   }
   function load() {
     var d = curDate, primo = !Object.keys(cacheSerate).length;
@@ -172,11 +174,33 @@
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function btn(cls, text, fn, title) { var b = el('button', cls, text); b.type = 'button'; b.onclick = fn; if (title) b.title = title; return b; }
 
-  function apriSerata(d) {
-    if (d === curDate) return; curDate = d; renderDates();
-    if (cacheSerate[d]) { state = cacheSerate[d]; render(); load(); }
-    else { $('turni').classList.add('attesa'); load(); }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // apre una serata; con `nome` scorre fino a quella persona e la evidenzia (arretrati)
+  function apriSerata(d, nome) {
+    if (d !== curDate) {
+      curDate = d; renderDates();
+      if (cacheSerate[d]) { state = cacheSerate[d]; render(); load(); }
+      else { $('turni').classList.add('attesa'); load(); }
+    }
+    if (!nome) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    // l'evidenziazione sopravvive ai ridisegni (render) per qualche secondo
+    daEvidenziare = { d: d, nome: nome, fino: Date.now() + 4000 };
+    var tent = 0;
+    (function cerca() {
+      var li = state && state.date === d && rigaDi(nome);
+      if (!li) { if (++tent < 40) setTimeout(cerca, 150); return; }
+      evidenzia(); li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function () { daEvidenziare = null; [].forEach.call(document.querySelectorAll('li.p.evidenzia'), function (x) { x.classList.remove('evidenzia'); }); }, 4000);
+    })();
+  }
+  var daEvidenziare = null;
+  function rigaDi(nome) {
+    return [].filter.call(document.querySelectorAll('#turni li.p'), function (x) {
+      var n = x.querySelector('.n'); return n && fvNorm(n.textContent) === fvNorm(nome);
+    })[0];
+  }
+  function evidenzia() {
+    if (!daEvidenziare || Date.now() > daEvidenziare.fino || daEvidenziare.d !== curDate) return;
+    var li = rigaDi(daEvidenziare.nome); if (li) li.classList.add('evidenzia');
   }
 
   var datesAdmin = false;
@@ -375,6 +399,7 @@
       box.append(card);
     });
     TURNI.forEach(function (T) { var x = $('add-' + T.k); if (x && keep[T.k]) x.value = keep[T.k]; });
+    evidenzia();
     if (foc && /^add-/.test(foc) && $(foc)) $(foc).focus();
 
     $('adminBox').hidden = VISTA_ATLETA || !(admin || areaVisibile);
@@ -439,7 +464,7 @@
     var mese = curDate.slice(0, 7), m = { serate: 0, giocate: 0, ore: 0, costo: 0, costoGioc: 0, previsto: 0, incassato: 0, margOra: 0 }, mancano = 0;
     var tb = $('meseSerate'); tb.replaceChildren();
     var td = function (cls, v) { var x = el('td', cls); if (typeof v === 'number') segno(x, v); else x.textContent = v; return x; };
-    wednesdays(12).forEach(function (d) {
+    wednesdays(settimaneStorico()).forEach(function (d) {
       if (d.slice(0, 7) !== mese) return;
       var s = cacheSerate[d]; if (!s) { mancano++; return; }
       var c = conti(s), gioc = giocata(d), tr = el('tr');
@@ -483,32 +508,41 @@
   // Quanto pagare alla struttura, mese per mese: turni già giocati e turni ancora da giocare
   function renderStruttura() {
     var now = nowRome(), mesi = {}, ordine = [];
-    wednesdays(12).forEach(function (d) {
+    wednesdays(settimaneStorico()).forEach(function (d) {
       var s = cacheSerate[d]; if (!s || !s.turni || s.annullata) return;
       var k = d.slice(0, 7);
-      if (!mesi[k]) { mesi[k] = { ore: 0, futuro: 0 }; ordine.push(k); }
+      if (!mesi[k]) { mesi[k] = { ore: 0, futuro: 0, incassato: 0, previsto: 0 }; ordine.push(k); }
       fvTurniDi(d).forEach(function (T) {
         var t = s.turni[T.k]; if (!t || !t.count || t.annullato) return;
         if (fvStarted(d, T.k, now)) mesi[k].ore += T.ore; else mesi[k].futuro += T.ore;
       });
+      // incassi a consuntivo: solo serate già giocate
+      if (giocata(d)) { var c = conti(s); mesi[k].incassato += c.incassato; mesi[k].previsto += c.previsto; }
     });
     var tb = $('struttura'); tb.replaceChildren();
     debitoStruttura = 0;
     $('costoOra2').textContent = COSTO_ORA;
     var saldati = saldatiLoc || state.config.saldati || {};
-    if (!ordine.length) { var vr = el('tr'), vc = el('td', 'empty', 'Nessuna serata'); vc.colSpan = 5; vr.append(vc); tb.append(vr); renderArretrato(); return; }
+    if (!ordine.length) { var vr = el('tr'), vc = el('td', 'empty', 'Nessuna serata'); vc.colSpan = 8; vr.append(vc); tb.append(vr); renderArretrato(); return; }
+    var somma = { ore: 0, costo: 0, pagato: 0, incassato: 0, daInc: 0 };
+    var num = function (v) { var x = el('td'); segno(x, v); return x; };
     ordine.sort().reverse().forEach(function (k) {
       var m = mesi[k], nome = dateLabel(k + '-15', { month: 'long', year: 'numeric' }), tr = el('tr');
-      tr.append(el('td', null, nome.charAt(0).toUpperCase() + nome.slice(1)), el('td', null, m.ore.toLocaleString('it-IT')),
-        el('td', 'tot', eur(m.ore * COSTO_ORA)), el('td', null, m.futuro ? '+' + eur(m.futuro * COSTO_ORA) + ' (' + oreTxt(m.futuro) + ')' : '—'));
+      var sx = saldati[k], dovuto = m.ore * COSTO_ORA, pagato = sx ? Math.min(sx.importo, dovuto || sx.importo) : 0;
+      var costo = el('td', null, eur(dovuto));
+      if (m.futuro) costo.append(el('small', 'muted', ' +' + eur(m.futuro * COSTO_ORA) + ' previsti'));
+      var pag = el('td', sx && dovuto <= sx.importo ? 'ok' : dovuto ? 'tot' : null, eur(sx ? sx.importo : 0));
+      if (dovuto > (sx ? sx.importo : 0)) pag.append(el('small', 'muted', ' mancano ' + eur(dovuto - (sx ? sx.importo : 0))));
+      tr.append(el('td', null, nome.charAt(0).toUpperCase() + nome.slice(1)), el('td', null, m.ore.toLocaleString('it-IT')), costo, pag,
+        el('td', null, eur(m.incassato)), el('td', null, eur(m.previsto - m.incassato)), num(m.incassato - dovuto));
+      somma.ore += m.ore; somma.costo += dovuto; somma.pagato += sx ? sx.importo : 0; somma.incassato += m.incassato; somma.daInc += m.previsto - m.incassato;
       // il contenuto sta in un div: la cella resta una cella di tabella (bordi allineati)
-      var td = el('td'), box = el('div', 'saldo'), sx = saldati[k], dovuto = m.ore * COSTO_ORA;
+      var td = el('td'), box = el('div', 'saldo');
       td.append(box);
       debitoStruttura += Math.max(0, dovuto - (sx ? sx.importo : 0));
       if (sx) {
-        tr.classList.add('saldato'); tr.cells[2].className = 'tot ok';
-        box.append(el('span', 'paid ok', '✓ Saldato ' + eur(sx.importo) + ' il ' + dateLabel(sx.il, { day: 'numeric', month: 'short' })));
-        if (dovuto > sx.importo) box.append(el('span', 'paid no', 'mancano ' + eur(dovuto - sx.importo)));
+        tr.classList.add('saldato');
+        box.append(el('span', 'paid ok', '✓ Saldato il ' + dateLabel(sx.il, { day: 'numeric', month: 'short' })));
         box.append(btn('link back', dovuto > sx.importo ? 'Aggiorna a ' + eur(dovuto) : 'Annulla', function () {
           if (dovuto > sx.importo) segnaSaldo(k, true, dovuto); else if (confirm('Togliere il saldo di ' + nomeMese(k) + '?')) segnaSaldo(k, false);
         }));
@@ -526,6 +560,10 @@
       tr.append(td);
       tb.append(tr);
     });
+    var tot = el('tr', 'tot');
+    tot.append(el('td', null, 'Totale'), el('td', null, somma.ore.toLocaleString('it-IT')), el('td', null, eur(somma.costo)), el('td', null, eur(somma.pagato)),
+      el('td', null, eur(somma.incassato)), el('td', null, eur(somma.daInc)), num(somma.incassato - somma.costo), el('td'));
+    tb.append(tot);
     renderArretrato();
   }
 
@@ -535,7 +573,7 @@
     var box = $('arretrato');
     if (!state || !state.admin || VISTA_ATLETA) { box.hidden = true; document.body.classList.remove('con-arretrato'); return; }
     var now = nowRome(), chi = {}, tot = 0;
-    wednesdays(12).forEach(function (d) {
+    wednesdays(settimaneStorico()).forEach(function (d) {
       var s = cacheSerate[d]; if (!s || !s.turni || s.annullata) return;
       fvTurniDi(d).forEach(function (T) {
         var t = s.turni[T.k]; if (!t || t.annullato || !fvStarted(d, T.k, now)) return;
@@ -560,7 +598,7 @@
       var r = el('div', 'arr-riga');
       r.append(el('b', null, x.nome), el('span', 'arr-tot', eur(x.tot)));
       x.serate.forEach(function (v) {
-        r.append(btn('link back', dateLabel(v.d, { day: 'numeric', month: 'short' }) + (v.dich ? ' · dice ' + (METODI[v.metodo] || 'pagato') : ''), function () { apriSerata(v.d); }, 'Apri la serata per segnare il pagamento'));
+        r.append(btn('btn small vai', 'Vai al ' + dateLabel(v.d, { day: 'numeric', month: 'short' }) + (v.dich ? ' · dice ' + (METODI[v.metodo] || 'pagato') : '') + ' →', function () { arrAperto = false; renderArretrato(); apriSerata(v.d, x.nome); }, 'Apri l’allenamento e segna il pagamento'));
       });
       det.append(r);
     });
