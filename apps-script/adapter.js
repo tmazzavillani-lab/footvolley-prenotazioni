@@ -66,6 +66,18 @@ var FvSheetStore = {
   // dopo 5 PIN sbagliati l'area istruttore si blocca per 15 minuti
   pinBloccato: function () { return Number(CacheService.getScriptCache().get('fvPinErr') || 0) >= 5; },
   pinErrato: function () { var c = CacheService.getScriptCache(); c.put('fvPinErr', String(Number(c.get('fvPinErr') || 0) + 1), 900); },
+  // distinte dei pagamenti alla struttura: cartella privata "Footvolley distinte" nel Drive dell'istruttore
+  saveFile: function (nome, mime, b64) {
+    var id = fvProp_('DISTINTE_FOLDER'), cartella = null;
+    try { if (id) cartella = DriveApp.getFolderById(id); } catch (e) { cartella = null; }
+    if (!cartella) {
+      cartella = DriveApp.createFolder('Footvolley distinte');
+      PropertiesService.getScriptProperties().setProperty('DISTINTE_FOLDER', cartella.getId());
+    }
+    var file = cartella.createFile(Utilities.newBlob(Utilities.base64Decode(b64), mime, nome));
+    return { id: file.getId(), url: file.getUrl() };
+  },
+  trashFile: function (id) { try { DriveApp.getFileById(id).setTrashed(true); } catch (e) { } },
   sendMail: function (to, subject, body) { MailApp.sendEmail(to, subject, body, { name: 'Ravenna Footvolley' }); },
   list: function (k) {
     if (!fvRows_[k]) {
@@ -119,6 +131,12 @@ function migraTurni202611() {
     Logger.log('Righe spostate da 20–21 a 19:30–21: ' + spostate + ', doppioni tolti: ' + tolte);
     FV_TURNI.forEach(function (t) { Logger.log(t.k + ' fissi: ' + fvFissiOggi(cfg.fissi[t.k]).join(', ')); });
   } finally { lock.releaseLock(); }
+}
+
+// Esegui una volta dall'editor dopo l'aggiunta delle distinte: chiede il permesso di usare Google Drive.
+function autorizzaDrive() {
+  DriveApp.getRootFolder();
+  Logger.log('Drive autorizzato: le distinte andranno nella cartella "Footvolley distinte".');
 }
 
 // Esegui una volta dall'editor per creare i fogli e autorizzare lo script.

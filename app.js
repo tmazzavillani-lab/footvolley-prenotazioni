@@ -69,6 +69,8 @@
     adminPin: function () { return '1234'; },
     demo: true,
     sendMail: function () { },
+    saveFile: function (nome, mime, b64) { return { id: 'demo' + Date.now(), url: 'data:' + mime + ';base64,' + b64 }; },
+    trashFile: function () { },
     list: function (k) { return (this.load()[k] || []).slice(); },
     add: function (k, o) { var db = this.load(); (db[k] = db[k] || []).push(o); this.save(db); },
     removeWhere: function (k, fn) { var db = this.load(); db[k] = (db[k] || []).filter(function (r) { return !fn(r); }); this.save(db); }
@@ -497,6 +499,55 @@
   }
 
   var saldatiLoc = null;
+  // distinta del bonifico alla struttura: carica / apri / sostituisci / togli
+  function cellaDistinta(mese, sx) {
+    var box = el('div', 'distinta');
+    var scegli = function () {
+      var inp = el('input'); inp.type = 'file'; inp.accept = 'application/pdf,image/*';
+      inp.onchange = function () { if (inp.files[0]) caricaDistinta(mese, inp.files[0]); };
+      inp.click();
+    };
+    if (sx.distinta) {
+      var a = el('a', 'link', '📎 Distinta'); a.href = sx.distinta.url; a.target = '_blank'; a.rel = 'noopener'; a.title = sx.distinta.nome;
+      box.append(a, btn('link back', 'Sostituisci', scegli), btn('link', 'Togli', function () {
+        if (!confirm('Togliere la distinta di ' + nomeMese(mese) + '? Il file va nel cestino di Drive.')) return;
+        inviaDistinta({ action: 'distinta', mese: mese, togli: true }, 'Distinta tolta');
+      }));
+    } else box.append(btn('link back', '📎 Carica distinta', scegli, 'PDF o foto del bonifico'));
+    return box;
+  }
+  function caricaDistinta(mese, file) {
+    var tipo = file.type || (/\.pdf$/i.test(file.name) ? 'application/pdf' : '');
+    if (!/^(application\/pdf|image\/)/.test(tipo)) { toast('Carica un PDF o una foto', true); return; }
+    var invia = function (dataUrl, mime) {
+      var b64 = String(dataUrl).split(',')[1] || '';
+      if (b64.length > 7000000) { toast('File troppo grande (massimo 5 MB)', true); return; }
+      inviaDistinta({ action: 'distinta', mese: mese, nome: file.name, mime: mime, dati: b64 }, 'Distinta caricata');
+    };
+    var fr = new FileReader();
+    fr.onerror = function () { toast('Non riesco a leggere il file', true); };
+    fr.onload = function () {
+      // foto grandi: ridotte a 2000 px in JPEG per caricarle veloci
+      if (/^image\/(jpeg|png|webp)$/.test(tipo) && file.size > 1500000) {
+        var img = new Image();
+        img.onload = function () {
+          var k = Math.min(1, 2000 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          invia(c.toDataURL('image/jpeg', 0.85), 'image/jpeg');
+        };
+        img.onerror = function () { invia(fr.result, tipo); };
+        img.src = fr.result;
+      } else invia(fr.result, tipo);
+    };
+    fr.readAsDataURL(file);
+  }
+  function inviaDistinta(p, okMsg) {
+    if (busy) return;
+    busy = true; toast('Caricamento…');
+    api(p).then(function (r) { saldatiLoc = r.saldati; busy = false; toast(okMsg); renderStruttura(); })
+      .catch(function (e) { busy = false; toast(e.message, true); });
+  }
   function nomeMese(k) { return dateLabel(k + '-15', { month: 'long', year: 'numeric' }); }
   function segnaSaldo(mese, saldato, importo) {
     if (busy) return;
@@ -533,6 +584,7 @@
       if (m.futuro) costo.append(el('small', 'muted', ' +' + eur(m.futuro * COSTO_ORA) + ' previsti'));
       var pag = el('td', sx && dovuto <= sx.importo ? 'ok' : dovuto ? 'tot' : null, eur(sx ? sx.importo : 0));
       if (dovuto > (sx ? sx.importo : 0)) pag.append(el('small', 'muted', ' mancano ' + eur(dovuto - (sx ? sx.importo : 0))));
+      if (sx) pag.append(cellaDistinta(k, sx));
       tr.append(el('td', null, nome.charAt(0).toUpperCase() + nome.slice(1)), el('td', null, m.ore.toLocaleString('it-IT')), costo, pag,
         el('td', null, eur(m.incassato)), el('td', null, eur(m.previsto - m.incassato)), num(m.incassato - dovuto));
       somma.ore += m.ore; somma.costo += dovuto; somma.pagato += sx ? sx.importo : 0; somma.incassato += m.incassato; somma.daInc += m.previsto - m.incassato;
