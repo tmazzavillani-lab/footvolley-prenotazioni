@@ -26,6 +26,8 @@
   var METODI = { satispay: 'Satispay', contanti: 'Contanti', bonifico: 'Bonifico' };
   var METODI_ADMIN = { satispay: 'Satispay', contanti: 'Contanti', bonifico: 'Bonifico', prova: 'Prova gratuita' };
   function myName() { return fvClean($('nome').value); }
+  var IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var STANDALONE = !!navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
   var COSTO_ORA = typeof window.FV_COSTO_ORA === 'number' ? window.FV_COSTO_ORA : 24;
   // Conti di una serata (solo istruttore): incassi come nei turni, costo = ore con almeno un iscritto
   function conti(s) {
@@ -239,9 +241,15 @@
     if (!ver.hidden) {
       ver.classList.toggle('ok', io.verificato);
       $('verStato').textContent = io.verificato ? '✓ Nome verificato su questo dispositivo' : io.registrato
-        ? 'Questo nome è già verificato su un altro dispositivo: inserisci la stessa email per ricevere il codice.'
+        ? 'Sei già registrato: su questo dispositivo serve solo il codice. Te lo mandiamo a ' + (io.email || 'la tua email') + '.'
         : 'Per prenotarti verifica il tuo nome, una volta sola: ti mandiamo un codice via email.';
       $('verInviaForm').hidden = io.verificato;
+      $('verEmail').hidden = !!io.registrato;
+      $('verInviaBtn').textContent = io.registrato ? 'Mandami il codice' : 'Invia codice';
+      // iPhone fuori dalla schermata Home: Safari svuota i dati dei siti non aperti da 7 giorni
+      $('verCasa').hidden = !(IOS && !STANDALONE);
+      // codice chiesto da poco: il campo resta visibile anche se la pagina si ricarica (es. dopo aver aperto la Mail)
+      if (!io.verificato && Date.now() - Number(lsGet('fv-attesa') || 0) < 30 * 60000) $('verCodiceForm').hidden = false;
       if (io.verificato) $('verCodiceForm').hidden = true;
     }
     renderSaldare(admin, io, me);
@@ -698,9 +706,11 @@
   $('nome').addEventListener('input', function () { lsSet('fv-nome', myName()); render(); clearTimeout(nomeT); nomeT = setTimeout(function () { cacheSerate = {}; load(); }, 700); });
   $('verInviaForm').onsubmit = function (e) {
     e.preventDefault();
-    var em = $('verEmail').value.trim(); if (!em) return;
+    var reg = state && state.io && state.io.registrato && !state.io.verificato;
+    var em = $('verEmail').value.trim(); if (!em && !reg) return;
     toast('Invio il codice…');
-    api({ action: 'verificaInvia', nome: myName(), email: em }).then(function (r) {
+    api(reg ? { action: 'verificaInvia', nome: myName(), registrata: true } : { action: 'verificaInvia', nome: myName(), email: em }).then(function (r) {
+      lsSet('fv-attesa', String(Date.now()));
       $('verCodiceForm').hidden = false; $('verCodice').focus();
       toast('Codice inviato a ' + r.email + (r.codiceDemo ? ' (prova: ' + r.codiceDemo + ')' : '') + '. Controlla anche lo spam.');
     }).catch(function (err) { toast(err.message, true); });
@@ -708,6 +718,7 @@
   $('verCodiceForm').onsubmit = function (e) {
     e.preventDefault();
     api({ action: 'verificaConferma', nome: myName(), codice: $('verCodice').value }).then(function (r) {
+      lsSet('fv-attesa', null);
       $('verCodice').value = ''; $('verCodiceForm').hidden = true;
       toast('Nome verificato: ciao ' + r.nome + '!'); load();
     }).catch(function (err) { toast(err.message, true); });

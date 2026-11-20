@@ -179,9 +179,11 @@ function fvVerifica(a, p, st, nowStr, admin) {
   if (a === 'verificaInvia') {
     var em = String(p.email || '').trim().toLowerCase().slice(0, 100);
     if (!nm || nm.split(' ').length < 2) throw new Error('Scrivi prima nome e cognome completi');
+    var reg = fvRegistrato(st, nm);
+    // nome già registrato su un altro dispositivo: il codice va all'email registrata (solo il proprietario lo riceve)
+    if (!em && p.registrata && reg) em = reg.email;
     if (!fvEmailOk(em)) throw new Error('Email non valida');
     if (!token) throw new Error('Telefono non riconosciuto');
-    var reg = fvRegistrato(st, nm);
     if (reg && reg.email !== em) throw new Error(nm + ' è già registrato con un’altra email (' + fvMask(reg.email) + '). Se è un errore chiedi all’istruttore.');
     var oggi = nowStr.slice(0, 10);
     var inviati = st.list('U').filter(function (r) { return r.email === em && r.verificato !== 'si' && String(r.creato).slice(0, 10) === oggi; }).length;
@@ -284,7 +286,7 @@ function fvRoute(p, st, nowStr) {
   var token = String(p.token || '');
   if (a === 'state') {
     var stt = fvState(cfg, st, d, token, admin, nowStr), nn = fvClean(p.nome);
-    if (nn) stt.io = { nome: nn, verificato: fvVerificato(st, nn, token), registrato: !!fvRegistrato(st, nn) };
+    if (nn) { var rg = fvRegistrato(st, nn); stt.io = { nome: nn, verificato: fvVerificato(st, nn, token), registrato: !!rg }; if (rg && !stt.io.verificato) stt.io.email = fvMask(rg.email); }
     if (nn && !admin && stt.io.verificato) stt.io.daSaldare = fvDaSaldare(cfg, st, nn, nowStr);
     return stt;
   }

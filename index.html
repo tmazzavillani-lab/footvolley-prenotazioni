@@ -6,7 +6,7 @@
 <title>Ravenna Footvolley · Prenotazioni</title>
 <script>
   // Se il browser (anche quello di WhatsApp) ha in memoria una pagina vecchia, ricarica quella nuova
-  window.FV_VERSIONE = 50;
+  window.FV_VERSIONE = 51;
   (function () {
     try {
       fetch('versione.txt?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (v) {
@@ -24,9 +24,12 @@
 <meta name="theme-color" content="#0D6E78">
 <link rel="icon" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Footvolley">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=50">
+<link rel="stylesheet" href="style.css?v=51">
 </head>
 <body>
 <div class="wrap">
@@ -50,13 +53,14 @@
       <form class="row" id="verInviaForm">
         <label for="verEmail" class="sr">La tua email</label>
         <input type="email" id="verEmail" autocomplete="email" placeholder="La tua email">
-        <button class="btn primary" type="submit">Invia codice</button>
+        <button class="btn primary" type="submit" id="verInviaBtn">Invia codice</button>
       </form>
       <form class="row" id="verCodiceForm" hidden>
         <label for="verCodice" class="sr">Codice ricevuto</label>
         <input type="text" id="verCodice" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="Codice di 6 cifre">
         <button class="btn primary" type="submit">Conferma</button>
       </form>
+      <p class="casa" id="verCasa" hidden>📱 <b>Su iPhone</b>, per non dover rifare la verifica ogni settimana: apri questa pagina in <b>Safari</b>, tocca <b>Condividi</b> (il quadrato con la freccia) → <b>Aggiungi alla schermata Home</b>, e d'ora in poi apri l'app da lì.</p>
     </div>
     <div class="saldare" id="saldare" hidden></div>
   </section>
@@ -152,8 +156,8 @@
     </div>
   </section>
 </div>
-<script src="config.js?v=50"></script>
-<script src="core.js?v=50"></script>
-<script src="app.js?v=50"></script>
+<script src="config.js?v=51"></script>
+<script src="core.js?v=51"></script>
+<script src="app.js?v=51"></script>
 </body>
 </html>
