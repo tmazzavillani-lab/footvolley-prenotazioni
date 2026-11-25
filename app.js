@@ -164,6 +164,14 @@
     } else if (p.action === 'declare') {
       var d = trova(t.people, p.nome);
       if (d) { d.dichiarato = !p.undo; d.metodo = p.undo ? '' : p.metodo; }
+    } else if (p.action === 'sposta') {
+      var dst = state.turni[p.a], mv = trova(t.people, p.nome);
+      if (mv && dst) {
+        t.people = t.people.filter(function (x) { return x !== mv; }); t.count--;
+        dst.people = dst.people.filter(function (x) { return fvNorm(x.nome) !== fvNorm(p.nome); });
+        mv.riservato = false; dst.people.push(mv); dst.count = dst.people.length;
+        if (mv.fisso) { mv.fisso = false; t.assenti.push(mv.nome); }
+      }
     } else if (p.action === 'toggleTurno') {
       t.annullato = !!p.annullato;
     } else if (p.action === 'sconto') {
@@ -175,6 +183,11 @@
     }
   }
 
+  var trascinato = null;
+  function sposta(da, nome, a) {
+    var X = fvTurnoDi(curDate, a);
+    act({ action: 'sposta', turno: da, nome: nome, a: a }, nome + ' spostato nel turno ' + (X ? X.l : ''));
+  }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function btn(cls, text, fn, title) { var b = el('button', cls, text); b.type = 'button'; b.onclick = fn; if (title) b.title = title; return b; }
 
@@ -269,6 +282,16 @@
       tot += n;
       var tAnn = !!t.annullato;
       var card = el('article', 'turno' + (tAnn ? ' annullato' : ''));
+      if (admin) {
+        // si può trascinare un nome da un turno all'altro
+        card.addEventListener('dragover', function (e) { if (trascinato && trascinato.turno !== T.k) { e.preventDefault(); card.classList.add('drop'); } });
+        card.addEventListener('dragleave', function (e) { if (!card.contains(e.relatedTarget)) card.classList.remove('drop'); });
+        card.addEventListener('drop', function (e) {
+          e.preventDefault(); card.classList.remove('drop');
+          var tr = trascinato; trascinato = null;
+          if (tr && tr.turno !== T.k) sposta(tr.turno, tr.nome, T.k);
+        });
+      }
       var head = el('div', 'thead');
       head.append(el('h3', null, T.l), el('span', 'count' + (n > cap ? ' over' : n === cap ? ' full' : ''), n + '/' + cap + (n >= cap ? ' · pieno' : '')));
       card.append(head);
@@ -297,6 +320,11 @@
         }
         var daConf = !!p.riservato;
         var li = el('li', 'p' + (isMe ? ' mine' : ''));
+        if (admin) {
+          li.draggable = true; li.title = 'Trascina in un altro turno per spostare';
+          li.addEventListener('dragstart', function (e) { trascinato = { turno: T.k, nome: p.nome }; li.classList.add('trascina'); try { e.dataTransfer.setData('text/plain', p.nome); e.dataTransfer.effectAllowed = 'move'; } catch (x) { } });
+          li.addEventListener('dragend', function () { li.classList.remove('trascina'); [].forEach.call(document.querySelectorAll('.turno.drop'), function (c) { c.classList.remove('drop'); }); });
+        }
         var vedoPag = admin || p.pagato !== undefined;
         var dot = el('span', 'dot' + (!vedoPag ? ' none' : p.pagato || free ? ' ok' : p.dichiarato ? ' wait' : ''));
         dot.title = free ? 'Gratis' : p.pagato ? 'Pagato' : p.dichiarato ? 'Pagamento da verificare' : 'Da pagare';
@@ -331,6 +359,15 @@
             if (p.fisso) act({ action: 'absent', turno: T.k, nome: p.nome }, p.nome + ' segnato assente');
             else act({ action: 'cancel', id: p.id }, p.nome + ' tolto dal turno');
           }));
+          // menu "Sposta" (comodo sul telefono, dove trascinare è scomodo)
+          var altri = TURNI.filter(function (X) { return X.k !== T.k; });
+          if (altri.length) {
+            var sel = el('select', 'sposta'); sel.setAttribute('aria-label', 'Sposta ' + p.nome + ' in un altro turno');
+            sel.append(new Option('Sposta ▾', ''));
+            altri.forEach(function (X) { sel.append(new Option('→ ' + X.l, X.k)); });
+            sel.onchange = function () { if (sel.value) sposta(T.k, p.nome, sel.value); };
+            li.append(sel);
+          }
         } else {
           var mio = !!p.mine;
           if (!mio) { /* i pagamenti degli altri non si vedono */ }

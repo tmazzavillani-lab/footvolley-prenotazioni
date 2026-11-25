@@ -292,7 +292,7 @@ function fvRoute(p, st, nowStr) {
   }
 
   var k = p.turno, nome = fvClean(p.nome);
-  var needTurno = ['book', 'absent', 'add', 'pay', 'declare', 'sconto'].indexOf(a) >= 0;
+  var needTurno = ['book', 'absent', 'add', 'pay', 'declare', 'sconto', 'sposta'].indexOf(a) >= 0;
   if (needTurno && !fvTurnoDi(d, k)) throw new Error('Turno non valido');
   var full = needTurno ? fvState(cfg, st, d, token, true, nowStr) : null, cur = full ? full.turni[k] : null;
   var isFisso = needTurno && fvHas(fvFissiAl(cfg, k, d), nome);
@@ -352,6 +352,26 @@ function fvRoute(p, st, nowStr) {
     st.removeWhere('G', match);
     st.removeWhere('D', match);
     if (p.paid) st.add('G', { data: d, turno: k, nome: nome, metodo: met });
+  } else if (a === 'sposta') {
+    // sposta una persona in un altro turno della stessa serata, con pagamento, metodo, sconto e prenotazione
+    if (!admin) throw new Error('Serve il PIN istruttore');
+    var dest = String(p.a || '');
+    if (!fvTurnoDi(d, dest) || dest === k) throw new Error('Turno di arrivo non valido');
+    var chiS = trova(nome);
+    if (!chiS) throw new Error(nome + ' non è in questo turno');
+    if (full.turni[dest].people.some(function (x) { return !x.riservato && fvNorm(x.nome) === fvNorm(nome); })) throw new Error(nome + ' è già nel turno ' + fvTurnoDi(d, dest).l);
+    var nelT = function (t) { return function (r) { return r.data === d && r.turno === t && fvNorm(r.nome) === fvNorm(nome); }; };
+    var pren = st.list('P').filter(nelT(k))[0];
+    st.removeWhere('P', nelT(k));
+    st.add('P', { id: pren ? pren.id : fvId(), data: d, turno: dest, nome: chiS.nome, token: pren ? pren.token : '', creato: pren ? pren.creato : nowStr });
+    ['G', 'D', 'S'].forEach(function (x) {
+      var righe = st.list(x).filter(nelT(k));
+      st.removeWhere(x, nelT(k)); st.removeWhere(x, nelT(dest));
+      righe.forEach(function (r) { var o = {}; for (var c in r) o[c] = r[c]; o.turno = dest; st.add(x, o); });
+    });
+    st.removeWhere('A', nelT(dest));
+    // un fisso spostato fuori dal suo turno risulta assente lì, così non compare due volte
+    if (fvHas(fvFissiAl(cfg, k, d), nome) && !st.list('A').some(nelT(k))) st.add('A', { data: d, turno: k, nome: chiS.nome });
   } else if (a === 'sconto') {
     // prezzo di una persona solo per questa serata (vuoto = torna al prezzo normale)
     if (!admin) throw new Error('Serve il PIN istruttore');
